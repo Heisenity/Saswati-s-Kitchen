@@ -6,11 +6,23 @@ Production-ready MVP for a Bengali homemade food delivery service in Barrackpore
 
 - Next.js App Router + TypeScript
 - Tailwind CSS with shadcn-style UI primitives
-- Prisma ORM for PostgreSQL or Supabase Postgres
+- Prisma ORM for Supabase Postgres
+- Supabase Auth with Google + Facebook OAuth for user and admin login
+- Doppler for environment management
 - Cloudflare R2 for payment proof storage
 - Telegram Bot API + Nodemailer for admin alerts
 - Separate Express + Socket.IO chat server
 - Render deployment blueprint
+
+## Connected services
+
+- Supabase project ref: `ovmvmjgutbdtkxnzkvpb`
+- Local dev ports:
+  - Frontend: `http://localhost:4001`
+  - Chat server: `http://localhost:4000`
+- Local Doppler scope on this machine:
+  - Project: `saswatis-kitchen`
+  - Config: `dev`
 
 ## Folder structure
 
@@ -45,18 +57,20 @@ render.yaml                Render service definitions
 - Realtime website chat with admin presence, offline alerts, and message persistence
 - Telegram and email notifications for orders, payment proof, and offline chat
 
-## Environment variables
+## Environment management
 
-Copy `.env.example` to `.env.local` and fill these values:
+This project is set up to use Doppler instead of a committed `.env.local`.
+
+Required Doppler secrets:
 
 - `DATABASE_URL`
 - `DIRECT_URL`
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_CHAT_SERVER_URL`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_PROJECT_REF`
 - `NEXT_PUBLIC_WHATSAPP_NUMBER`
-- `ADMIN_USERNAME`
-- `ADMIN_PASSWORD`
-- `ADMIN_SESSION_SECRET`
 - `R2_ACCOUNT_ID`
 - `R2_ACCESS_KEY_ID`
 - `R2_SECRET_ACCESS_KEY`
@@ -70,22 +84,78 @@ Copy `.env.example` to `.env.local` and fill these values:
 - `SMTP_PASS`
 - `SMTP_FROM`
 
-For Supabase Postgres, use the Supabase connection string for both `DATABASE_URL` and `DIRECT_URL`.
+Notes:
+
+- Use the Supabase Postgres connection string for both `DATABASE_URL` and `DIRECT_URL`.
+- `NEXT_PUBLIC_SUPABASE_URL` should be `https://ovmvmjgutbdtkxnzkvpb.supabase.co`
+- `SUPABASE_PROJECT_REF` should be `ovmvmjgutbdtkxnzkvpb`
+- If `DATABASE_URL` is missing, the storefront falls back to sample menu/settings data, but orders, chat persistence, admin data, and payment workflows will not be production-ready.
+
+You can use `.env.example` as a value checklist, but the runtime scripts are wired through Doppler.
 
 ## Local setup
 
 ```bash
 npm install
-npm run prisma:generate
-npx prisma migrate dev --name init
-npm run prisma:seed
+npm run prisma:generate:raw
 npm run dev:all
+```
+
+If you want Doppler-injected secrets during local development, use:
+
+```bash
+npm run dev:all:doppler
+```
+
+If you are setting this up on another machine, link the repo to Doppler first:
+
+```bash
+doppler setup -p saswatis-kitchen -c dev
 ```
 
 App URLs:
 
-- Storefront: `http://localhost:3000`
-- Chat server health: `http://localhost:4001/health`
+- Storefront: `http://localhost:4001`
+- Chat server health: `http://localhost:4000/health`
+
+## Supabase setup
+
+The Supabase database schema and seed data have already been applied to project `ovmvmjgutbdtkxnzkvpb`.
+
+Configured in the repo:
+
+- SSR auth client via `@supabase/ssr`
+- Shared `/auth/callback` PKCE flow
+- Google and Facebook login entry points for both `/login` and `/admin/login`
+- `profiles` table for role-based authorization
+- RLS policies for public menu access and private operational tables
+
+Still required in the Supabase Dashboard:
+
+1. Set **Authentication > URL Configuration**:
+   - Site URL: `http://localhost:4001`
+   - Redirect URL: `http://localhost:4001/auth/callback`
+2. Enable **Google** and **Facebook** providers in **Authentication > Providers**
+3. Add provider credentials from Google Cloud and Facebook Developers
+
+Provider callback references:
+
+- Google authorized redirect URI: `https://ovmvmjgutbdtkxnzkvpb.supabase.co/auth/v1/callback`
+- Facebook valid OAuth redirect URI: `https://ovmvmjgutbdtkxnzkvpb.supabase.co/auth/v1/callback`
+
+## Admin access
+
+Admins authenticate with the same Supabase OAuth flow as users, but access is granted only when the signed-in profile has role `ADMIN`.
+
+After your first login, promote your admin account in Supabase SQL:
+
+```sql
+update public.profiles
+set role = 'ADMIN'
+where email = 'your-email@example.com';
+```
+
+Without this role update, `/admin/login` will sign in successfully and then redirect back with `admin_required`.
 
 ## Default business rules
 
@@ -112,3 +182,4 @@ Point both services at the same Postgres database. If you want Supabase-hosted P
 - The poster asset was not present in the workspace, so the current build uses code-based Bengali visual assets and placeholders.
 - Replace `/public/brand/upi-qr-placeholder.svg` with the real UPI QR image or update it from admin settings.
 - Replace the sample SVG thali illustrations with real food photography when available.
+- `npm run build` currently passes with the Supabase auth + Doppler setup.

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LocateFixed, LoaderCircle } from "lucide-react";
 import { useCart } from "@/components/cart/cart-provider";
@@ -10,7 +10,8 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { calculateDeliveryCharge, haversineDistanceKm } from "@/lib/delivery";
+import { defaultKitchenAddress } from "@/lib/default-data";
+import { MAX_DELIVERY_DISTANCE_KM, calculateDeliveryCharge, haversineDistanceKm } from "@/lib/delivery";
 import { buildOrderWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -41,12 +42,12 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
   const [address, setAddress] = useState("");
   const [landmark, setLandmark] = useState("");
   const [slotType, setSlotType] = useState<"LUNCH" | "DINNER">(slotState.activeSlot ?? "LUNCH");
-  const [utr, setUtr] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [location, setLocation] = useState<{ latitude?: number; longitude?: number }>({});
+  const [location, setLocation] = useState<{ latitude?: number; longitude?: number; accuracy?: number; source?: "gps" | "address" }>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [successNote, setSuccessNote] = useState("");
+  const [addressLookupLoading, setAddressLookupLoading] = useState(false);
 
   const deliveryPreview = useMemo(() => {
     const distanceKm =
@@ -59,11 +60,7 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
 
     const deliveryCharge = calculateDeliveryCharge({
       subtotal,
-      distanceKm,
-      freeDeliveryOneKmMin: settings.freeDeliveryOneKmMin,
-      freeDeliveryTwoKmMin: settings.freeDeliveryTwoKmMin,
-      aboveTwoKmDeliveryCharge: settings.aboveTwoKmDeliveryCharge,
-      lowOrderDeliveryCharge: settings.lowOrderDeliveryCharge
+      distanceKm
     });
     const total = subtotal + deliveryCharge;
     const advance = Math.ceil(total / 2);
@@ -76,19 +73,64 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
       balance: total - advance
     };
   }, [location, settings, subtotal]);
+  const outOfRange = deliveryPreview.distanceKm > MAX_DELIVERY_DISTANCE_KM;
 
-  async function detectLocation() {
-    setError("");
+  function detectLocation(silent = false) {
+    if (!navigator.geolocation) return;
+    if (!silent) setError("");
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setLocation({
           latitude: position.coords.latitude,
-          longitude: position.coords.longitude
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          source: "gps"
         });
       },
-      () => setError("Location permission was denied. You can still continue with address and landmark.")
+      () => {
+        if (!silent) {
+          setError("Location permission was denied. You can still continue with address and landmark.");
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 15000
+      }
     );
   }
+
+  useEffect(() => {
+    detectLocation(true);
+  }, []);
+
+  useEffect(() => {
+    const query = [address.trim(), landmark.trim()].filter(Boolean).join(", ");
+    if (query.length < 12) return;
+
+    const timeout = window.setTimeout(async () => {
+      setAddressLookupLoading(true);
+      try {
+        const response = await fetch("/api/geocode", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ address, landmark })
+        });
+        const result = await response.json();
+        if (result.ok) {
+          setLocation({
+            latitude: result.latitude,
+            longitude: result.longitude,
+            source: "address"
+          });
+        }
+      } finally {
+        setAddressLookupLoading(false);
+      }
+    }, 700);
+
+    return () => window.clearTimeout(timeout);
+  }, [address, landmark, location.source]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -126,7 +168,6 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
           latitude: location.latitude,
           longitude: location.longitude,
           slotType,
-          paymentUtr: utr,
           paymentScreenshotUrl,
           items: items.map((item) => ({
             menuItemId: item.id,
@@ -178,6 +219,9 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
             <p className="mt-5 rounded-3xl border border-primary/20 bg-primary/5 px-4 py-4 text-sm text-primary">
               To avoid food wastage, we take 50% advance payment. Balance can be paid on delivery.
             </p>
+            <p className="mt-3 rounded-3xl bg-muted px-4 py-4 text-sm text-stone-700">
+              Delivery distance is measured from Saswati&apos;s Kitchen: {defaultKitchenAddress}
+            </p>
             {successNote ? (
               <p className="mt-4 rounded-3xl border border-leaf/20 bg-leaf/10 px-4 py-4 text-sm text-leaf">
                 {successNote}
@@ -208,61 +252,78 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
               <Textarea placeholder="Full address" value={address} onChange={(event) => setAddress(event.target.value)} required />
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <Button type="button" variant="outline" onClick={detectLocation}>
+              <Button type="button" variant="outline" onClick={() => detectLocation()}>
                 <LocateFixed className="mr-2 h-4 w-4" />
                 Use current location
               </Button>
               <span className="text-sm text-stone-600">{slotState.label}</span>
               {location.latitude && location.longitude ? (
                 <span className="rounded-full bg-leaf/10 px-3 py-2 text-xs font-semibold text-leaf">
-                  Location captured
+                  Location captured{location.accuracy ? ` (±${Math.round(location.accuracy)} m)` : ""}
+                </span>
+              ) : null}
+              {location.accuracy && location.accuracy > 120 ? (
+                <span className="text-xs text-stone-500">
+                  Accuracy is a bit low. Tap location again near a window for a better delivery estimate.
+                </span>
+              ) : null}
+              {!location.latitude && addressLookupLoading ? (
+                <span className="text-xs text-stone-500">Checking delivery distance from your address…</span>
+              ) : null}
+              {outOfRange ? (
+                <span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">
+                  We are coming soon to your location.
                 </span>
               ) : null}
             </div>
           </Card>
 
-          <Card className="p-6">
-            <div className="grid gap-6 md:grid-cols-[0.8fr_1.2fr]">
-              <div className="rounded-[24px] border border-border bg-white p-4">
-                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Pay exact advance</p>
-                <Image
-                  src={settings.qrImageUrl}
-                  alt="UPI QR code"
-                  width={512}
-                  height={512}
-                  className="mt-4 rounded-[24px] border border-border bg-white"
-                />
-                <p className="mt-4 text-sm text-stone-700">UPI ID: {settings.upiId}</p>
-                <p className="mt-2 text-lg font-semibold text-primary">
-                  Advance to pay now: {formatCurrency(deliveryPreview.advance)}
-                </p>
-              </div>
-              <div>
-                <p className="font-serif text-2xl">Payment proof</p>
-                <p className="mt-3 text-sm leading-7 text-stone-600">
-                  Upload payment screenshot and UPI transaction ID / UTR. After payment submission, order status becomes Payment Pending Verification.
-                </p>
-                <div className="mt-5 space-y-4">
-                  <Input placeholder="UPI transaction ID / UTR" value={utr} onChange={(event) => setUtr(event.target.value)} required />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="block w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm"
-                    onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-                    required
+          {outOfRange ? null : (
+            <Card className="p-6">
+              <div className="grid gap-6 md:grid-cols-[0.8fr_1.2fr]">
+                <div className="rounded-[24px] border border-border bg-white p-4">
+                  <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Pay exact advance</p>
+                  <Image
+                    src={settings.qrImageUrl}
+                    alt="UPI QR code"
+                    width={512}
+                    height={512}
+                    className="mt-4 h-auto w-full rounded-[24px] border border-border bg-white"
+                    sizes="(min-width: 1024px) 24vw, (min-width: 768px) 30vw, 100vw"
+                    priority
+                    unoptimized
                   />
-                  <p className="text-xs text-stone-500">
-                    Payment proof received. Please also drop a WhatsApp message for faster confirmation.
+                  <p className="mt-4 text-sm text-stone-700">UPI ID: {settings.upiId}</p>
+                  <p className="mt-2 text-lg font-semibold text-primary">
+                    Advance to pay now: {formatCurrency(deliveryPreview.advance)}
                   </p>
                 </div>
+                <div>
+                  <p className="font-serif text-2xl">Payment proof</p>
+                  <p className="mt-3 text-sm leading-7 text-stone-600">
+                    Upload your payment screenshot. After payment submission, order status becomes Payment Pending Verification.
+                  </p>
+                  <div className="mt-5 space-y-4">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="block w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm"
+                      onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                      required
+                    />
+                    <p className="text-xs text-stone-500">
+                      Payment proof received. Please also drop a WhatsApp message for faster confirmation.
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          )}
 
           <Button
             className="w-full"
             size="lg"
-            disabled={submitting || items.length === 0 || !slotState.activeSlot}
+            disabled={submitting || items.length === 0 || !slotState.activeSlot || outOfRange}
           >
             {submitting ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
             Submit order

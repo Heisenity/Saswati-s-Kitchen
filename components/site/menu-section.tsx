@@ -2,12 +2,14 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/components/cart/cart-provider";
+import { CustomerAuthCard } from "@/components/auth/customer-auth-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 
 type MenuSectionProps = {
@@ -23,6 +25,9 @@ type MenuSectionProps = {
 };
 
 export function MenuSection({ items }: MenuSectionProps) {
+  const [authNext, setAuthNext] = useState("/");
+  const [authOpen, setAuthOpen] = useState(false);
+
   return (
     <section id="menu" className="section-padding">
       <div className="mx-auto max-w-7xl">
@@ -40,23 +45,58 @@ export function MenuSection({ items }: MenuSectionProps) {
 
         <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {items.map((item, index) => (
-            <MenuCard item={item} index={index} key={item.id} />
+            <MenuCard
+              item={item}
+              index={index}
+              key={item.id}
+              onAuthRequired={(next) => {
+                setAuthNext(next);
+                setAuthOpen(true);
+              }}
+            />
           ))}
         </div>
       </div>
+      {authOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="relative w-full max-w-md">
+            <button
+              type="button"
+              onClick={() => setAuthOpen(false)}
+              className="absolute right-4 top-4 z-10 rounded-full bg-white/90 p-2 text-foreground shadow"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <CustomerAuthCard next={authNext} />
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
 
 function MenuCard({
   item,
-  index
+  index,
+  onAuthRequired
 }: {
   item: MenuSectionProps["items"][number];
   index: number;
+  onAuthRequired: (next: string) => void;
 }) {
-  const { addItem } = useCart();
+  const { addItem, replaceWithSingleItem } = useCart();
   const [quantity, setQuantity] = useState(1);
+
+  async function requireAuth(next: string) {
+    const supabase = createClient();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (user) return true;
+    onAuthRequired(next);
+    return false;
+  }
 
   return (
     <motion.div
@@ -70,8 +110,11 @@ function MenuCard({
           src={item.imageUrl}
           alt={item.name}
           width={640}
-          height={480}
-          className="h-52 w-full rounded-[24px] border border-border bg-white object-cover"
+          height={640}
+          className="aspect-square h-auto w-full rounded-[24px] border border-border bg-white object-cover"
+          sizes="(min-width: 1280px) 30vw, (min-width: 768px) 46vw, 100vw"
+          quality={82}
+          loading="lazy"
         />
         <div className="mt-5 flex items-start justify-between gap-4">
           <div>
@@ -90,35 +133,20 @@ function MenuCard({
         </ul>
         <div className="mt-5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 rounded-full border border-border bg-white p-1">
-            <button className="rounded-full px-3 py-2" onClick={() => setQuantity(Math.max(1, quantity - 1))}>
+            <button type="button" className="rounded-full px-3 py-2" onClick={() => setQuantity(Math.max(1, quantity - 1))}>
               -
             </button>
             <span className="min-w-8 text-center font-semibold">{quantity}</span>
-            <button className="rounded-full px-3 py-2" onClick={() => setQuantity(quantity + 1)}>
+            <button type="button" className="rounded-full px-3 py-2" onClick={() => setQuantity(quantity + 1)}>
               +
             </button>
           </div>
           <div className="flex flex-1 justify-end gap-2">
             <Button
+              size="sm"
+              className="min-w-[118px] transition-transform duration-200 hover:-translate-y-0.5"
               variant="outline"
-              onClick={() =>
-                addItem(
-                  {
-                    id: item.id,
-                    name: item.name,
-                    price: item.price,
-                    imageUrl: item.imageUrl,
-                    badge: item.badge
-                  },
-                  quantity
-                )
-              }
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add to Cart
-            </Button>
-            <Button
-              onClick={() => {
+              onClick={async () => {
                 addItem(
                   {
                     id: item.id,
@@ -129,6 +157,27 @@ function MenuCard({
                   },
                   quantity
                 );
+                if (!(await requireAuth("/"))) return;
+              }}
+            >
+              <Plus className="mr-1.5 h-4 w-4" />
+              Add to Cart
+            </Button>
+            <Button
+              size="sm"
+              className="min-w-[108px] transition-transform duration-200 hover:-translate-y-0.5"
+              onClick={async () => {
+                replaceWithSingleItem(
+                  {
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    imageUrl: item.imageUrl,
+                    badge: item.badge
+                  },
+                  quantity
+                );
+                if (!(await requireAuth("/checkout"))) return;
                 window.location.href = "/checkout";
               }}
             >

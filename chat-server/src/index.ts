@@ -7,6 +7,7 @@ import { prisma } from "../../lib/prisma";
 import { isDatabaseConfigured } from "../../lib/env";
 import { sendOfflineChatNotification } from "../../lib/notifications";
 import { publicEnv } from "../../lib/public-env";
+import { isLikelyHumanName, isValidIndianMobile, normalizeIndianMobile, sanitizeHumanName } from "../../lib/chat";
 
 const app = express();
 app.use(compression());
@@ -27,15 +28,33 @@ const io = new Server(server, {
 });
 
 const adminRoom = "admins";
-const primaryAdminId = "primary-admin";
 
-async function setAdminPresence(onlineStatus: boolean) {
+function toMessagePayload(
+  message: {
+    id: string;
+    chatId: string;
+    senderType: "CUSTOMER" | "ADMIN";
+    message: string;
+    createdAt: Date;
+  },
+  customerName: string,
+  clientId?: string
+) {
+  return {
+    ...message,
+    senderName: message.senderType === "ADMIN" ? "Admin" : customerName,
+    createdAt: message.createdAt.toISOString(),
+    clientId
+  };
+}
+
+async function setAdminPresence(adminId: string, onlineStatus: boolean) {
   if (!isDatabaseConfigured()) return;
 
   await prisma.adminPresence.upsert({
-    where: { adminId: primaryAdminId },
+    where: { adminId },
     update: { onlineStatus, lastSeenAt: new Date() },
-    create: { adminId: primaryAdminId, onlineStatus, lastSeenAt: new Date() }
+    create: { adminId, onlineStatus, lastSeenAt: new Date() }
   });
 }
 
@@ -58,13 +77,37 @@ async function getThreads() {
     phone: thread.phone,
     orderId: thread.orderId,
     unreadCount: thread.messages.filter((message) => !message.seen && message.senderType === "CUSTOMER").length,
-    messages: thread.messages
+    messages: thread.messages.map((message) => toMessagePayload(message, thread.customerName))
   }));
 }
 
 async function broadcastThreads() {
   const threads = await getThreads();
   io.to(adminRoom).emit("admin:threads", threads);
+}
+
+async function getAdminUser(accessToken: string) {
+  if (!publicEnv.supabasePublishableKey) return null;
+
+  const response = await fetch(`${publicEnv.supabaseUrl}/auth/v1/user`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      apikey: publicEnv.supabasePublishableKey
+    }
+  });
+
+  if (!response.ok) return null;
+
+  const user = (await response.json()) as { id: string };
+  if (!isDatabaseConfigured()) return user;
+
+  const profile = await prisma.profile.findUnique({
+    where: { id: user.id },
+    select: { role: true }
+  });
+
+  if (profile?.role !== "ADMIN") return null;
+  return user;
 }
 
 function broadcastAdminStatus() {
@@ -124,15 +167,26 @@ async function findOrCreateCustomerChat(input: {
 io.on("connection", async (socket) => {
   const auth = socket.handshake.auth as {
     role?: "admin" | "customer";
-    adminId?: string;
+    accessToken?: string;
     customerName?: string;
     phone?: string;
     orderNumber?: string;
   };
 
   if (auth.role === "admin") {
+    const adminUser =
+      typeof auth.accessToken === "string"
+        ? await getAdminUser(auth.accessToken)
+        : null;
+
+    if (!adminUser) {
+      socket.disconnect(true);
+      return;
+    }
+
+    socket.data.adminId = adminUser.id;
     socket.join(adminRoom);
-    await setAdminPresence(true);
+    await setAdminPresence(adminUser.id, true);
     broadcastAdminStatus();
     socket.emit("admin:threads", await getThreads());
 
@@ -164,17 +218,28 @@ io.on("connection", async (socket) => {
   }
 
   if (auth.role === "customer" && auth.customerName && auth.phone) {
+    const customerName = sanitizeHumanName(auth.customerName);
+    const phone = normalizeIndianMobile(auth.phone);
+
+    if (!isLikelyHumanName(customerName) || !isValidIndianMobile(phone)) {
+      socket.disconnect(true);
+      return;
+    }
+
     const chat = await findOrCreateCustomerChat({
-      customerName: auth.customerName,
-      phone: auth.phone,
+      customerName,
+      phone,
       orderNumber: auth.orderNumber
     });
 
     socket.data.chatId = chat.id;
-    socket.data.customerName = auth.customerName;
-    socket.data.phone = auth.phone;
+    socket.data.customerName = customerName;
+    socket.data.phone = phone;
     socket.join(`chat:${chat.id}`);
-    socket.emit("chat:history", chat.messages ?? []);
+    socket.emit(
+      "chat:history",
+      (chat.messages ?? []).map((message) => toMessagePayload(message, chat.customerName))
+    );
     socket.emit("admin:status", (io.sockets.adapter.rooms.get(adminRoom)?.size ?? 0) > 0);
   }
 
@@ -183,9 +248,9 @@ io.on("connection", async (socket) => {
     if (!resolvedChatId) return;
 
     if (auth.role === "admin") {
-      io.to(`chat:${resolvedChatId}`).emit("chat:typing", typing);
+      io.to(`chat:${resolvedChatId}`).emit("chat:typing", { typing, senderType: "ADMIN" });
     } else {
-      io.to(adminRoom).emit("chat:typing", typing);
+      io.to(adminRoom).emit("chat:typing", { typing, senderType: "CUSTOMER", chatId: resolvedChatId });
     }
   });
 
@@ -209,15 +274,18 @@ io.on("connection", async (socket) => {
           id: crypto.randomUUID(),
           chatId,
           message: payload.message.trim(),
-          senderType: isAdmin ? "ADMIN" : "CUSTOMER",
+          senderType: (isAdmin ? "ADMIN" : "CUSTOMER") as "ADMIN" | "CUSTOMER",
           seen: isAdmin,
           createdAt: new Date()
         };
 
-    const messagePayload = {
-      ...message,
-      clientId: payload.clientId
-    };
+    const customerName =
+      auth.role === "admin"
+        ? (isDatabaseConfigured()
+            ? (await prisma.chat.findUnique({ where: { id: chatId }, select: { customerName: true } }))?.customerName
+            : "Customer") ?? "Customer"
+        : socket.data.customerName ?? "Customer";
+    const messagePayload = toMessagePayload(message, customerName, payload.clientId);
 
     if (isDatabaseConfigured()) {
       await prisma.chat.update({
@@ -226,6 +294,8 @@ io.on("connection", async (socket) => {
       });
     }
 
+    io.to(`chat:${chatId}`).emit("chat:typing", { typing: false, senderType: isAdmin ? "ADMIN" : "CUSTOMER" });
+    io.to(adminRoom).emit("chat:typing", { typing: false, senderType: isAdmin ? "ADMIN" : "CUSTOMER", chatId });
     io.to(`chat:${chatId}`).emit("chat:message", messagePayload);
     io.to(adminRoom).emit("chat:message", messagePayload);
     await broadcastThreads();
@@ -249,13 +319,15 @@ io.on("connection", async (socket) => {
 
   socket.on("disconnect", async () => {
     if (auth.role === "admin" && (io.sockets.adapter.rooms.get(adminRoom)?.size ?? 0) === 0) {
-      await setAdminPresence(false);
+      if (typeof socket.data.adminId === "string") {
+        await setAdminPresence(socket.data.adminId, false);
+      }
       broadcastAdminStatus();
     }
   });
 });
 
-const port = Number(process.env.PORT ?? 4001);
+const port = Number(process.env.PORT ?? 4000);
 server.listen(port, () => {
   console.log(`Chat server listening on ${port}`);
 });

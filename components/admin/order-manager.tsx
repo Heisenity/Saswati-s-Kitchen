@@ -16,7 +16,6 @@ type OrderRow = {
   orderStatus: string;
   totalAmount: number;
   advanceAmount: number;
-  paymentUtr: string | null;
   paymentScreenshotUrl: string | null;
   createdAt: string | Date;
   items: Array<{ id: string; itemName: string; quantity: number }>;
@@ -110,7 +109,6 @@ export function OrderManager({ initialOrders }: { initialOrders: OrderRow[] }) {
               <p className="mt-3 text-xs text-stone-500">
                 Payment status: {order.paymentStatus.replaceAll("_", " ")}
               </p>
-              <p className="mt-2 text-xs text-stone-500">UTR: {order.paymentUtr ?? "Not provided"}</p>
             </div>
           </div>
         </Card>

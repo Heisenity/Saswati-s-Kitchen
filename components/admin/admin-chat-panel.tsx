@@ -4,9 +4,12 @@ import { io, type Socket } from "socket.io-client";
 import { useEffect, useRef, useState } from "react";
 import { SendHorizontal } from "lucide-react";
 import { publicEnv } from "@/lib/public-env";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { formatChatTime } from "@/lib/chat";
+import { cn } from "@/lib/utils";
 
 type Thread = {
   id: string;
@@ -14,47 +17,79 @@ type Thread = {
   phone: string;
   orderId?: string | null;
   unreadCount?: number;
-  messages?: Array<{ id: string; senderType: "CUSTOMER" | "ADMIN"; message: string }>;
+  messages?: Array<{
+    id: string;
+    chatId: string;
+    senderType: "CUSTOMER" | "ADMIN";
+    senderName: string;
+    message: string;
+    createdAt: string;
+  }>;
 };
 
 export function AdminChatPanel() {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [activeThread, setActiveThread] = useState<Thread | null>(null);
   const [text, setText] = useState("");
+  const [error, setError] = useState("");
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    const socket = io(publicEnv.chatServerUrl, {
-      transports: ["websocket"],
-      auth: { role: "admin", adminId: "primary-admin" }
-    });
+    let cancelled = false;
 
-    socket.on("admin:threads", (nextThreads: Thread[]) => setThreads(nextThreads));
-    socket.on("admin:thread", (thread: Thread) => setActiveThread(thread));
-    socket.on("chat:message", (message: { chatId: string; id: string; senderType: "CUSTOMER" | "ADMIN"; message: string }) => {
-      setThreads((current) =>
-        current.map((thread) =>
-          thread.id === message.chatId
+    async function connect() {
+      const supabase = createClient();
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token || cancelled) {
+        setError("Admin session missing. Please sign in again.");
+        return;
+      }
+
+      const socket = io(publicEnv.chatServerUrl, {
+        transports: ["websocket"],
+        auth: {
+          role: "admin",
+          accessToken: session.access_token
+        }
+      });
+
+      socket.on("connect_error", () => {
+        setError("Could not verify admin chat access.");
+      });
+      socket.on("admin:threads", (nextThreads: Thread[]) => setThreads(nextThreads));
+      socket.on("admin:thread", (thread: Thread) => setActiveThread(thread));
+      socket.on("chat:message", (message: { chatId: string; id: string; senderType: "CUSTOMER" | "ADMIN"; senderName: string; message: string; createdAt: string }) => {
+        setThreads((current) =>
+          current.map((thread) =>
+            thread.id === message.chatId
+              ? {
+                  ...thread,
+                  messages: [...(thread.messages ?? []), message]
+                }
+              : thread
+          )
+        );
+        setActiveThread((current) =>
+          current?.id === message.chatId
             ? {
-                ...thread,
-                messages: [...(thread.messages ?? []), message]
+                ...current,
+                messages: [...(current.messages ?? []), message]
               }
-            : thread
-        )
-      );
-      setActiveThread((current) =>
-        current?.id === message.chatId
-          ? {
-              ...current,
-              messages: [...(current.messages ?? []), message]
-            }
-          : current
-      );
-    });
+            : current
+        );
+      });
 
-    socketRef.current = socket;
+      socketRef.current = socket;
+    }
+
+    void connect();
+
     return () => {
-      socket.disconnect();
+      cancelled = true;
+      socketRef.current?.disconnect();
     };
   }, []);
 
@@ -75,6 +110,7 @@ export function AdminChatPanel() {
     <div className="grid gap-6 xl:grid-cols-[320px_1fr]">
       <Card className="p-4">
         <p className="font-serif text-2xl">Conversations</p>
+        {error ? <p className="mt-3 text-sm text-primary">{error}</p> : null}
         <div className="mt-4 space-y-2">
           {threads.map((thread) => (
             <button
@@ -82,8 +118,17 @@ export function AdminChatPanel() {
               className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-left"
               onClick={() => openThread(thread.id)}
             >
-              <p className="font-semibold">{thread.customerName}</p>
-              <p className="text-xs text-stone-500">{thread.phone}</p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold">{thread.customerName}</p>
+                  <p className="text-xs text-stone-500">{thread.phone}</p>
+                </div>
+                {thread.unreadCount ? (
+                  <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-white">
+                    {thread.unreadCount}
+                  </span>
+                ) : null}
+              </div>
             </button>
           ))}
         </div>
@@ -94,11 +139,21 @@ export function AdminChatPanel() {
           {activeThread?.messages?.map((message) => (
             <div
               key={message.id}
-              className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${
-                message.senderType === "ADMIN" ? "ml-auto bg-primary text-white" : "bg-white"
-              }`}
+              className={cn("max-w-[80%]", message.senderType === "ADMIN" ? "ml-auto text-right" : "text-left")}
             >
-              {message.message}
+              <div
+                className={cn(
+                  "rounded-2xl px-3 py-2 text-sm shadow-sm",
+                  message.senderType === "ADMIN"
+                    ? "bg-primary text-white"
+                    : "border border-border bg-white text-foreground"
+                )}
+              >
+                {message.message}
+              </div>
+              <div className="mt-1 px-1 text-[11px] text-stone-500">
+                <span className="font-medium">{message.senderType === "ADMIN" ? "Admin" : activeThread?.customerName}</span> · {formatChatTime(message.createdAt)}
+              </div>
             </div>
           ))}
         </div>

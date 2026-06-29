@@ -54,7 +54,9 @@ export function CartDrawer() {
                       alt={item.name}
                       width={80}
                       height={80}
-                      className="rounded-2xl border border-border bg-white object-cover"
+                      className="h-20 w-20 rounded-2xl border border-border bg-white object-cover"
+                      sizes="80px"
+                      quality={75}
                     />
                     <div className="flex-1">
                       <div className="flex items-start justify-between gap-3">

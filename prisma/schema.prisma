@@ -38,6 +38,24 @@ enum SenderType {
   ADMIN
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model Profile {
+  id        String   @id @db.Uuid
+  email     String?  @unique
+  fullName  String?  @map("full_name")
+  avatarUrl String?  @map("avatar_url")
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([role])
+  @@map("profiles")
+}
+
 model MenuItem {
   id            String              @id @default(cuid())
   name          String
@@ -71,6 +89,7 @@ model Order {
   id                   String         @id @default(cuid())
   orderNumber          String         @unique
   checkoutToken        String         @unique
+  userId               String?        @db.Uuid
   customerName         String
   phone                String
   address              String
@@ -94,6 +113,7 @@ model Order {
   chat                 Chat?
   paymentProof         PaymentProof?
 
+  @@index([userId, createdAt])
   @@index([phone, createdAt])
   @@index([orderStatus, createdAt])
 }
@@ -148,8 +168,8 @@ model AdminPresence {
 
 model Setting {
   id                       String   @id @default(cuid())
-  kitchenLatitude          Float    @default(22.7604)
-  kitchenLongitude         Float    @default(88.3700)
+  kitchenLatitude          Float    @default(22.757527)
+  kitchenLongitude         Float    @default(88.380229)
   lunchCloseTime           String   @default("09:00")
   dinnerOpenTime           String   @default("15:00")
   dinnerCloseTime          String   @default("17:00")

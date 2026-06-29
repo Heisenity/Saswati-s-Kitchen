@@ -14,7 +14,6 @@ type OrderLike = {
   distanceKm?: number | null;
   address: string;
   landmark?: string | null;
-  paymentUtr?: string | null;
   paymentScreenshotUrl?: string | null;
   items?: Array<{ itemName: string; quantity: number }>;
 };
@@ -74,7 +73,6 @@ export async function sendNewOrderNotification(order: OrderLike) {
     `Balance: ₹${order.balanceAmount}`,
     `Distance: ${order.distanceKm?.toFixed(2) ?? "0"} km`,
     `Address: ${order.address}`,
-    `UTR: ${order.paymentUtr ?? "Not submitted"}`,
     `Screenshot: ${order.paymentScreenshotUrl ?? "Not submitted"}`
   ].join("\n");
 
@@ -88,7 +86,6 @@ export async function sendPaymentProofNotification(order: OrderLike) {
   const message = [
     "Payment proof uploaded",
     `Order ID: ${order.orderNumber}`,
-    `UTR: ${order.paymentUtr ?? "Not submitted"}`,
     `Screenshot: ${order.paymentScreenshotUrl ?? "Not submitted"}`
   ].join("\n");
 

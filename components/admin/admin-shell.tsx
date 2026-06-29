@@ -1,7 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { clearAdminSession } from "@/lib/auth";
 
 const links = [
   { href: "/admin/dashboard", label: "Dashboard" },
@@ -36,17 +33,10 @@ export function AdminShell({
                 </Link>
               ))}
             </nav>
-            <form
-              className="mt-6"
-              action={async () => {
-                "use server";
-                await clearAdminSession();
-                redirect("/admin/login");
-              }}
-            >
-              <Button variant="outline" className="w-full">
+            <form className="mt-6" action="/auth/signout" method="post">
+              <button className="w-full rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold">
                 Logout
-              </Button>
+              </button>
             </form>
           </aside>
 

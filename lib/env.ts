@@ -1,14 +1,14 @@
 const requiredClientEnv = {
-  appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-  chatServerUrl: process.env.NEXT_PUBLIC_CHAT_SERVER_URL ?? "http://localhost:4001"
+  appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:4001",
+  chatServerUrl: process.env.NEXT_PUBLIC_CHAT_SERVER_URL ?? "http://localhost:4000",
+  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://ovmvmjgutbdtkxnzkvpb.supabase.co",
+  supabasePublishableKey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? ""
 };
 
 export const env = {
   ...requiredClientEnv,
   databaseUrl: process.env.DATABASE_URL,
-  adminUsername: process.env.ADMIN_USERNAME ?? "admin",
-  adminPassword: process.env.ADMIN_PASSWORD ?? "change-me",
-  adminSessionSecret: process.env.ADMIN_SESSION_SECRET ?? "replace-with-a-long-random-secret",
+  supabaseProjectRef: process.env.SUPABASE_PROJECT_REF ?? "ovmvmjgutbdtkxnzkvpb",
   r2AccountId: process.env.R2_ACCOUNT_ID,
   r2AccessKeyId: process.env.R2_ACCESS_KEY_ID,
   r2SecretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
@@ -25,4 +25,8 @@ export const env = {
 
 export function isDatabaseConfigured() {
   return Boolean(env.databaseUrl);
+}
+
+export function isSupabaseAuthConfigured() {
+  return Boolean(env.supabaseUrl && env.supabasePublishableKey);
 }

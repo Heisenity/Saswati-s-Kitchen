@@ -1,11 +1,13 @@
 import { randomUUID } from "crypto";
 import { PaymentStatus, type SlotType } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { geocodeAddress } from "@/lib/geocode";
+import { isPrismaConnectionError, prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
-import { calculateDeliveryCharge, haversineDistanceKm } from "@/lib/delivery";
+import { MAX_DELIVERY_DISTANCE_KM, calculateDeliveryCharge, haversineDistanceKm } from "@/lib/delivery";
 import { assertSlotAvailable } from "@/lib/slot";
 import { sendNewOrderNotification, sendPaymentProofNotification } from "@/lib/notifications";
 import { isDatabaseConfigured } from "@/lib/env";
+import { matchesPhone, normalizePhone } from "@/lib/phone";
 
 export type CheckoutItemInput = {
   menuItemId?: string;
@@ -16,6 +18,7 @@ export type CheckoutItemInput = {
 
 export type CreateOrderInput = {
   checkoutToken: string;
+  userId?: string;
   customerName: string;
   phone: string;
   address: string;
@@ -24,7 +27,6 @@ export type CreateOrderInput = {
   longitude?: number;
   slotType: SlotType;
   items: CheckoutItemInput[];
-  paymentUtr?: string;
   paymentScreenshotUrl?: string;
 };
 
@@ -34,6 +36,14 @@ export function buildOrderNumber() {
 
 export function getAdvanceAmount(total: number) {
   return Math.ceil(total / 2);
+}
+
+async function resolveCustomerCoordinates(input: CreateOrderInput) {
+  if (input.latitude && input.longitude) {
+    return { latitude: input.latitude, longitude: input.longitude };
+  }
+
+  return geocodeAddress([input.address, input.landmark].filter(Boolean).join(", "));
 }
 
 export async function createOrder(input: CreateOrderInput) {
@@ -54,22 +64,24 @@ export async function createOrder(input: CreateOrderInput) {
   const settings = await getSettings();
   assertSlotAvailable(settings, input.slotType);
 
+  const normalizedPhone = normalizePhone(input.phone);
   const subtotal = input.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-  const distanceKm =
-    input.latitude && input.longitude
-      ? haversineDistanceKm(
-          { lat: settings.kitchenLatitude, lng: settings.kitchenLongitude },
-          { lat: input.latitude, lng: input.longitude }
-        )
-      : 0;
+  const customerCoordinates = await resolveCustomerCoordinates(input);
+  if (!customerCoordinates) {
+    throw new Error("Please use Locate Me or enter a more complete delivery address.");
+  }
+
+  const distanceKm = haversineDistanceKm(
+    { lat: settings.kitchenLatitude, lng: settings.kitchenLongitude },
+    { lat: customerCoordinates.latitude, lng: customerCoordinates.longitude }
+  );
+  if (distanceKm > MAX_DELIVERY_DISTANCE_KM) {
+    throw new Error("We are coming soon to your location.");
+  }
 
   const deliveryCharge = calculateDeliveryCharge({
     subtotal,
-    distanceKm,
-    freeDeliveryOneKmMin: settings.freeDeliveryOneKmMin,
-    freeDeliveryTwoKmMin: settings.freeDeliveryTwoKmMin,
-    aboveTwoKmDeliveryCharge: settings.aboveTwoKmDeliveryCharge,
-    lowOrderDeliveryCharge: settings.lowOrderDeliveryCharge
+    distanceKm
   });
   const totalAmount = subtotal + deliveryCharge;
   const advanceAmount = getAdvanceAmount(totalAmount);
@@ -80,12 +92,13 @@ export async function createOrder(input: CreateOrderInput) {
     data: {
       orderNumber,
       checkoutToken: input.checkoutToken || randomUUID(),
+      userId: input.userId,
       customerName: input.customerName,
-      phone: input.phone,
+      phone: normalizedPhone,
       address: input.address,
       landmark: input.landmark,
-      latitude: input.latitude,
-      longitude: input.longitude,
+      latitude: customerCoordinates.latitude,
+      longitude: customerCoordinates.longitude,
       distanceKm,
       slotType: input.slotType,
       subtotal,
@@ -94,7 +107,6 @@ export async function createOrder(input: CreateOrderInput) {
       advanceAmount,
       balanceAmount,
       paymentStatus: PaymentStatus.PENDING_VERIFICATION,
-      paymentUtr: input.paymentUtr,
       paymentScreenshotUrl: input.paymentScreenshotUrl,
       items: {
         create: input.items.map((item) => ({
@@ -104,16 +116,7 @@ export async function createOrder(input: CreateOrderInput) {
           unitPrice: item.unitPrice,
           totalPrice: item.quantity * item.unitPrice
         }))
-      },
-      paymentProof:
-        input.paymentScreenshotUrl && input.paymentUtr
-          ? {
-              create: {
-                screenshotUrl: input.paymentScreenshotUrl,
-                utr: input.paymentUtr
-              }
-            }
-          : undefined
+      }
     },
     include: {
       items: true
@@ -122,5 +125,39 @@ export async function createOrder(input: CreateOrderInput) {
 
   await sendNewOrderNotification(order);
   if (input.paymentScreenshotUrl) await sendPaymentProofNotification(order);
+  return order;
+}
+
+export async function getOrdersForUser(userId: string) {
+  if (!isDatabaseConfigured()) return [];
+
+  try {
+    return await prisma.order.findMany({
+      where: { userId },
+      include: { items: true },
+      orderBy: { createdAt: "desc" },
+      take: 12
+    });
+  } catch (error) {
+    if (isPrismaConnectionError(error)) return [];
+    throw error;
+  }
+}
+
+export async function lookupOrderByPhone(orderNumber: string, phone: string) {
+  if (!isDatabaseConfigured()) return null;
+
+  let order;
+  try {
+    order = await prisma.order.findUnique({
+      where: { orderNumber },
+      include: { items: true }
+    });
+  } catch (error) {
+    if (isPrismaConnectionError(error)) return null;
+    throw error;
+  }
+
+  if (!order || !matchesPhone(order.phone, phone)) return null;
   return order;
 }

@@ -9,7 +9,6 @@ export const orderSchema = z.object({
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   slotType: z.enum(["LUNCH", "DINNER"]),
-  paymentUtr: z.string().min(6).optional(),
   paymentScreenshotUrl: z.string().url().optional(),
   items: z
     .array(
@@ -23,9 +22,9 @@ export const orderSchema = z.object({
     .min(1)
 });
 
-export const loginSchema = z.object({
-  username: z.string().min(1),
-  password: z.string().min(1)
+export const orderLookupSchema = z.object({
+  orderNumber: z.string().min(4),
+  phone: z.string().min(10)
 });
 
 export const menuItemSchema = z.object({

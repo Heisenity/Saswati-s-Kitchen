@@ -20,6 +20,7 @@ type CartItem = {
 type CartContextValue = {
   items: CartItem[];
   addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
+  replaceWithSingleItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
   updateQuantity: (id: string, quantity: number) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
@@ -28,19 +29,26 @@ type CartContextValue = {
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
-
 const storageKey = "saswatis-kitchen-cart";
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(storageKey);
-    if (stored) setItems(JSON.parse(stored));
+    try {
+      const saved = window.sessionStorage.getItem(storageKey);
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        setItems(parsed.filter((item) => item && typeof item.id === "string" && item.quantity > 0));
+      }
+    } catch {
+      // ponytail: bad session cart should not break ordering
+    }
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(storageKey, JSON.stringify(items));
+    window.sessionStorage.setItem(storageKey, JSON.stringify(items));
   }, [items]);
 
   const value = useMemo<CartContextValue>(() => {
@@ -64,6 +72,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
           return [...current, { ...item, quantity }];
         });
+      },
+      replaceWithSingleItem(item, quantity = 1) {
+        setItems([{ ...item, quantity }]);
       },
       updateQuantity(id, quantity) {
         setItems((current) =>

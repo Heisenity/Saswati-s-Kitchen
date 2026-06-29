@@ -32,13 +32,6 @@ export function Hero() {
             <Link href="#menu" className={cn(buttonVariants({ size: "lg" }))}>
               Order Today’s Menu
             </Link>
-            <Link href="#menu" className={cn(buttonVariants({ size: "lg", variant: "outline" }))}>
-              View Lunch Thalis
-            </Link>
-          </div>
-          <div className="mt-10 grid gap-3 text-sm text-stone-700 sm:grid-cols-2">
-            <div className="rounded-3xl border border-border bg-white/80 p-4">Freshly cooked in small daily batches</div>
-            <div className="rounded-3xl border border-border bg-white/80 p-4">50% advance to reduce food wastage</div>
           </div>
         </motion.div>
 
@@ -52,11 +45,13 @@ export function Hero() {
             <Badge className="bg-mustard/25 text-foreground">Premium Bengali Lunch</Badge>
           </div>
           <Image
-            src="/brand/mutton-thali.svg"
+            src="/brand/mutton-thali.jpg"
             alt="Saswati's Kitchen signature lunch thali"
             width={640}
-            height={480}
-            className="h-auto w-full rounded-[26px] border border-border bg-white"
+            height={640}
+            className="aspect-square h-auto w-full rounded-[26px] border border-border bg-white object-cover"
+            sizes="(min-width: 1024px) 42vw, 100vw"
+            quality={84}
             priority
           />
           <div className="mt-6 grid grid-cols-2 gap-3">

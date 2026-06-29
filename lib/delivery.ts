@@ -1,11 +1,9 @@
 type DeliveryArgs = {
   subtotal: number;
   distanceKm: number;
-  freeDeliveryOneKmMin: number;
-  freeDeliveryTwoKmMin: number;
-  aboveTwoKmDeliveryCharge: number;
-  lowOrderDeliveryCharge: number;
 };
+
+export const MAX_DELIVERY_DISTANCE_KM = 6;
 
 export function haversineDistanceKm(
   from: { lat: number; lng: number },
@@ -26,16 +24,11 @@ export function haversineDistanceKm(
 
 export function calculateDeliveryCharge({
   subtotal,
-  distanceKm,
-  freeDeliveryOneKmMin,
-  freeDeliveryTwoKmMin,
-  aboveTwoKmDeliveryCharge,
-  lowOrderDeliveryCharge
+  distanceKm
 }: DeliveryArgs) {
-  if (distanceKm > 2) return aboveTwoKmDeliveryCharge;
-  if (distanceKm > 1) {
-    return subtotal >= freeDeliveryTwoKmMin ? 0 : lowOrderDeliveryCharge;
-  }
-
-  return subtotal >= freeDeliveryOneKmMin ? 0 : lowOrderDeliveryCharge;
+  if (subtotal <= 0) return 0;
+  if (distanceKm > MAX_DELIVERY_DISTANCE_KM) return 0;
+  if (distanceKm > 2) return 29;
+  if (distanceKm > 1) return 19;
+  return 12;
 }

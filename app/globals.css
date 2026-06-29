@@ -37,3 +37,21 @@ body {
     linear-gradient(90deg, rgba(181, 30, 30, 0.05) 1px, transparent 1px);
   background-size: 28px 28px;
 }
+
+@keyframes bell-ring {
+  0%, 92%, 100% {
+    transform: rotate(0deg);
+  }
+  93% {
+    transform: rotate(14deg);
+  }
+  95% {
+    transform: rotate(-12deg);
+  }
+  97% {
+    transform: rotate(10deg);
+  }
+  99% {
+    transform: rotate(-8deg);
+  }
+}

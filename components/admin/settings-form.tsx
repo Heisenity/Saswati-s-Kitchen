@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { defaultKitchenAddress } from "@/lib/default-data";
 
 type SettingsShape = {
   kitchenLatitude: number;
@@ -57,6 +58,9 @@ export function SettingsForm({ initialSettings }: { initialSettings: SettingsSha
   return (
     <Card className="p-6">
       <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Kitchen & delivery settings</p>
+      <p className="mt-3 text-sm text-stone-600">
+        Delivery origin address: {defaultKitchenAddress}
+      </p>
       <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={submitForm}>
         <Input placeholder="Kitchen latitude" value={form.kitchenLatitude} onChange={(event) => setForm({ ...form, kitchenLatitude: event.target.value })} />
         <Input placeholder="Kitchen longitude" value={form.kitchenLongitude} onChange={(event) => setForm({ ...form, kitchenLongitude: event.target.value })} />

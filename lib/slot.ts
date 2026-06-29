@@ -33,10 +33,10 @@ export function getSlotState(settings: {
   const dinnerOpen = parseTime(settings.dinnerOpenTime);
   const dinnerClose = parseTime(settings.dinnerCloseTime);
 
-  if (now < lunchClose) {
+  if (now < lunchClose || now > dinnerClose) {
     return {
       lunch: "OPEN",
-      dinner: "NOT_OPEN",
+      dinner: now < lunchClose ? "NOT_OPEN" : "CLOSED",
       activeSlot: "LUNCH",
       label: "Lunch Open"
     };
@@ -47,7 +47,7 @@ export function getSlotState(settings: {
       lunch: "CLOSED",
       dinner: "NOT_OPEN",
       activeSlot: null,
-      label: "Dinner Opens at 3 PM"
+      label: "Dinner Opens at 9:30 AM"
     };
   }
 
@@ -80,11 +80,11 @@ export function assertSlotAvailable(
   const state = getSlotState(settings, date);
 
   if (requestedSlot === "LUNCH" && state.lunch !== "OPEN") {
-    throw new Error("Lunch ordering is closed after 9:00 AM IST.");
+    throw new Error("Lunch ordering is open from 6:01 PM to 9:00 AM IST.");
   }
 
   if (requestedSlot === "DINNER" && state.dinner !== "OPEN") {
-    throw new Error("Dinner orders are accepted only between 3:00 PM and 5:00 PM IST.");
+    throw new Error("Dinner orders are accepted only between 9:30 AM and 6:00 PM IST.");
   }
 
   return state;
