@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 39 100% 97%;
+  --foreground: 0 0% 14%;
+  --card: 36 100% 99%;
+  --border: 31 43% 85%;
+  --primary: 0 72% 41%;
+  --mustard: 43 79% 57%;
+  --leaf: 146 65% 34%;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-background font-sans text-foreground antialiased;
+  background-image:
+    radial-gradient(circle at top left, rgba(231, 182, 62, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(255, 250, 241, 0.98), rgba(255, 248, 239, 1));
+}
+
+.surface {
+  @apply rounded-[28px] border border-border bg-card shadow-warm;
+}
+
+.section-padding {
+  @apply px-4 py-16 sm:px-6 lg:px-8 lg:py-24;
+}
+
+.bridge-grid {
+  background-image:
+    linear-gradient(rgba(181, 30, 30, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(181, 30, 30, 0.05) 1px, transparent 1px);
+  background-size: 28px 28px;
+}

@@ -1,0 +1,13 @@
+<svg width="1200" height="400" viewBox="0 0 1200 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g opacity="0.12" stroke="#B51E1E" stroke-width="3">
+    <path d="M40 320H1160" />
+    <path d="M150 320L260 110L380 320" />
+    <path d="M380 320L500 80L620 320" />
+    <path d="M620 320L740 80L860 320" />
+    <path d="M860 320L980 110L1090 320" />
+    <path d="M260 110H500" />
+    <path d="M500 80H740" />
+    <path d="M740 80H980" />
+    <path d="M205 215H1045" />
+  </g>
+</svg>

@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum MealType {
+  LUNCH
+  DINNER
+}
+
+enum SlotType {
+  LUNCH
+  DINNER
+}
+
+enum PaymentStatus {
+  PENDING_VERIFICATION
+  CONFIRMED
+  REJECTED
+}
+
+enum OrderStatus {
+  PAYMENT_PENDING_VERIFICATION
+  CONFIRMED
+  PREPARING
+  OUT_FOR_DELIVERY
+  DELIVERED
+  REJECTED
+}
+
+enum SenderType {
+  CUSTOMER
+  ADMIN
+}
+
+model MenuItem {
+  id            String              @id @default(cuid())
+  name          String
+  slug          String              @unique
+  description   String
+  price         Int
+  imageUrl      String
+  mealType      MealType
+  badge         String
+  isActive      Boolean             @default(true)
+  availableDate DateTime?
+  stockLimit    Int                 @default(0)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  components    MenuItemComponent[]
+  orderItems    OrderItem[]
+
+  @@index([mealType, isActive, availableDate])
+}
+
+model MenuItemComponent {
+  id         String   @id @default(cuid())
+  menuItemId String
+  itemName   String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@index([menuItemId])
+}
+
+model Order {
+  id                   String         @id @default(cuid())
+  orderNumber          String         @unique
+  checkoutToken        String         @unique
+  customerName         String
+  phone                String
+  address              String
+  landmark             String?
+  latitude             Float?
+  longitude            Float?
+  distanceKm           Float?
+  slotType             SlotType
+  subtotal             Int
+  deliveryCharge       Int
+  totalAmount          Int
+  advanceAmount        Int
+  balanceAmount        Int
+  paymentStatus        PaymentStatus  @default(PENDING_VERIFICATION)
+  orderStatus          OrderStatus    @default(PAYMENT_PENDING_VERIFICATION)
+  paymentUtr           String?
+  paymentScreenshotUrl String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  items                OrderItem[]
+  chat                 Chat?
+  paymentProof         PaymentProof?
+
+  @@index([phone, createdAt])
+  @@index([orderStatus, createdAt])
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  menuItemId String?
+  itemName   String
+  quantity   Int
+  unitPrice  Int
+  totalPrice Int
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem? @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([menuItemId])
+}
+
+model Chat {
+  id           String        @id @default(cuid())
+  customerName String
+  phone        String
+  orderId      String?       @unique
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  order        Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  messages     ChatMessage[]
+
+  @@index([phone, createdAt])
+  @@index([updatedAt])
+}
+
+model ChatMessage {
+  id         String     @id @default(cuid())
+  chatId      String
+  senderType  SenderType
+  message     String
+  seen        Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  chat        Chat       @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([chatId, createdAt])
+}
+
+model AdminPresence {
+  id           String   @id @default(cuid())
+  adminId      String   @unique
+  onlineStatus Boolean  @default(false)
+  lastSeenAt   DateTime @default(now())
+}
+
+model Setting {
+  id                       String   @id @default(cuid())
+  kitchenLatitude          Float    @default(22.7604)
+  kitchenLongitude         Float    @default(88.3700)
+  lunchCloseTime           String   @default("09:00")
+  dinnerOpenTime           String   @default("15:00")
+  dinnerCloseTime          String   @default("17:00")
+  freeDeliveryOneKmMin     Int      @default(99)
+  freeDeliveryTwoKmMin     Int      @default(149)
+  aboveTwoKmDeliveryCharge Int      @default(29)
+  lowOrderDeliveryCharge   Int      @default(19)
+  upiId                    String   @default("saswatiskitchen@upi")
+  qrImageUrl               String   @default("/brand/upi-qr-placeholder.svg")
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+}
+
+model PaymentProof {
+  id             String        @id @default(cuid())
+  orderId        String        @unique
+  screenshotUrl  String
+  utr            String
+  verificationStatus PaymentStatus @default(PENDING_VERIFICATION)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
