@@ -6,7 +6,8 @@ const nextConfig = {
         protocol: "https",
         hostname: "**"
       }
-    ]
+    ],
+    qualities: [75, 82, 84]
   }
 };
 
