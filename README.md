@@ -11,7 +11,7 @@ Production-ready MVP for a Bengali homemade food delivery service in Barrackpore
 - Doppler for environment management
 - Cloudflare R2 for payment proof storage
 - Telegram Bot API + Nodemailer for admin alerts
-- Separate Express + Socket.IO chat server
+- Supabase Realtime for live chat updates
 - Render deployment blueprint
 
 ## Connected services
@@ -19,7 +19,6 @@ Production-ready MVP for a Bengali homemade food delivery service in Barrackpore
 - Supabase project ref: `ovmvmjgutbdtkxnzkvpb`
 - Local dev ports:
   - Frontend: `http://localhost:4001`
-  - Chat server: `http://localhost:4000`
 - Local Doppler scope on this machine:
   - Project: `saswatis-kitchen`
   - Config: `dev`
@@ -32,7 +31,6 @@ app/
   api/                     Order, upload, admin, and chat helper routes
   checkout/                Checkout page
   receipt/[orderNumber]/   Receipt page
-chat-server/src/           Separate low-latency Socket.IO server
 components/
   admin/                   Admin dashboard client components
   cart/                    Cart provider and drawer
@@ -66,7 +64,6 @@ Required Doppler secrets:
 - `DATABASE_URL`
 - `DIRECT_URL`
 - `NEXT_PUBLIC_APP_URL`
-- `NEXT_PUBLIC_CHAT_SERVER_URL`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_PROJECT_REF`
@@ -115,7 +112,6 @@ doppler setup -p saswatis-kitchen -c dev
 App URLs:
 
 - Storefront: `http://localhost:4001`
-- Chat server health: `http://localhost:4000/health`
 
 ## Supabase setup
 
@@ -172,9 +168,8 @@ Without this role update, `/admin/login` will sign in successfully and then redi
 `render.yaml` provisions:
 
 - `saswatis-kitchen-web` for Next.js
-- `saswatis-kitchen-chat` for Express + Socket.IO
 
-Point both services at the same Postgres database. If you want Supabase-hosted Postgres, keep the DB outside Render and only deploy the app services on Render.
+Point it at the same Supabase Postgres database and Supabase Auth project.
 
 ## Notes
 

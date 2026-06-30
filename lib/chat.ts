@@ -10,6 +10,7 @@ export function normalizeIndianMobile(input: string) {
   const digits = input.replace(/\D/g, "");
 
   if (digits.length === 10) return digits;
+  if (digits.length === 11 && digits.startsWith("0")) return digits.slice(1);
   if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2);
   return digits;
 }
@@ -38,12 +39,17 @@ export function isLikelyHumanName(input: string) {
 }
 
 export function formatChatTime(date: string | Date) {
+  const value =
+    typeof date === "string" && !/(z|[+-]\d{2}:?\d{2})$/i.test(date)
+      ? `${date}Z`
+      : date;
+
   return new Intl.DateTimeFormat("en-IN", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
     timeZone: "Asia/Kolkata"
-  }).format(new Date(date));
+  }).format(new Date(value));
 }
 
 export function serializeChatAttachment(attachment: ChatAttachment) {

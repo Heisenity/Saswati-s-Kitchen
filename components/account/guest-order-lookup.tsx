@@ -1,6 +1,4 @@
 "use client";
-
-import Link from "next/link";
 import { useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -88,9 +86,6 @@ export function GuestOrderLookup() {
             <Info label="Advance paid" value={formatCurrency(order.advanceAmount)} />
             <Info label="Balance due" value={formatCurrency(order.balanceAmount)} />
           </div>
-          <Link href={`/receipt/${order.orderNumber}`} className={cn(buttonVariants(), "mt-4")}>
-            Open receipt
-          </Link>
         </div>
       ) : null}
     </Card>

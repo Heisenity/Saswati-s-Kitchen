@@ -3,6 +3,11 @@ export const MealType = {
   DINNER: "DINNER"
 } as const;
 
+export const MenuItemKind = {
+  THALI: "THALI",
+  ADD_ON: "ADD_ON"
+} as const;
+
 export const SlotType = {
   LUNCH: "LUNCH",
   DINNER: "DINNER"
@@ -34,6 +39,7 @@ export const UserRole = {
 } as const;
 
 export type MealType = (typeof MealType)[keyof typeof MealType];
+export type MenuItemKind = (typeof MenuItemKind)[keyof typeof MenuItemKind];
 export type SlotType = (typeof SlotType)[keyof typeof SlotType];
 export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus];
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];

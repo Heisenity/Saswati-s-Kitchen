@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { Pool, type PoolClient, type QueryResultRow } from "pg";
 import type {
   MealType,
+  MenuItemKind,
   OrderStatus,
   PaymentStatus,
   SenderType,
@@ -36,6 +37,7 @@ type MenuItemRow = {
   price: number;
   imageUrl: string;
   mealType: MealType;
+  itemKind: MenuItemKind;
   badge: string;
   isActive: boolean;
   availableDate: Date | string | null;
@@ -344,6 +346,7 @@ async function loadMenuItems(args?: any, client?: DbClient) {
         m.price,
         m."imageUrl" as "imageUrl",
         m."mealType" as "mealType",
+        m."itemKind" as "itemKind",
         m.badge,
         m."isActive" as "isActive",
         m."availableDate" as "availableDate",
@@ -611,10 +614,10 @@ export const prisma = {
         await query(
           `
             insert into "MenuItem" (
-              id, name, slug, description, price, "imageUrl", "mealType", badge,
+              id, name, slug, description, price, "imageUrl", "mealType", "itemKind", badge,
               "isActive", "availableDate", "stockLimit", "createdAt", "updatedAt"
             )
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now())
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())
           `,
           [
             id,
@@ -624,6 +627,7 @@ export const prisma = {
             data.price,
             data.imageUrl,
             data.mealType,
+            data.itemKind ?? "THALI",
             data.badge,
             data.isActive ?? true,
             data.availableDate ?? null,
@@ -659,6 +663,7 @@ export const prisma = {
           [`price`, "price"],
           [`"imageUrl"`, "imageUrl"],
           [`"mealType"`, "mealType"],
+          [`"itemKind"`, "itemKind"],
           [`badge`, "badge"],
           [`"isActive"`, "isActive"],
           [`"availableDate"`, "availableDate"],
@@ -698,6 +703,13 @@ export const prisma = {
         const [item] = await loadMenuItems({ where: { id: { in: [args.where.id] } } }, client);
         return item;
       });
+    },
+    async delete(args: any) {
+      const { rows } = await query<MenuItemRow>(
+        `delete from "MenuItem" where id = $1 returning *`,
+        [args.where.id]
+      );
+      return rows[0] ?? null;
     }
   },
   menuItemComponent: {
@@ -758,7 +770,7 @@ export const prisma = {
               "updatedAt"
             )
             values (
-              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, coalesce($19, 'PAYMENT_PENDING_VERIFICATION'), $20, $21, now(), now()
+              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, now(), now()
             )
           `,
           [
@@ -779,8 +791,8 @@ export const prisma = {
             data.totalAmount,
             data.advanceAmount,
             data.balanceAmount,
-            data.paymentStatus,
-            data.orderStatus,
+            data.paymentStatus ?? "PENDING_VERIFICATION",
+            data.orderStatus ?? "PAYMENT_PENDING_VERIFICATION",
             data.paymentUtr ?? null,
             data.paymentScreenshotUrl ?? null
           ],
@@ -825,13 +837,23 @@ export const prisma = {
       return loadOrders("", [], { take: args?.take });
     },
     async update(args: any) {
+      const setClauses = ['"updatedAt" = now()'];
+      const values: Array<string | null> = [args.where.id];
+
+      if (args.data.orderStatus !== undefined) {
+        values.push(args.data.orderStatus);
+        setClauses.unshift(`"orderStatus" = $${values.length}`);
+      }
+
+      if (args.data.paymentStatus !== undefined) {
+        values.push(args.data.paymentStatus);
+        setClauses.unshift(`"paymentStatus" = $${values.length}`);
+      }
+
       const { rows } = await query<OrderRow>(
         `
           update "Order"
-          set
-            "orderStatus" = coalesce($2, "orderStatus"),
-            "paymentStatus" = coalesce($3, "paymentStatus"),
-            "updatedAt" = now()
+          set ${setClauses.join(", ")}
           where id = $1
           returning
             id,
@@ -858,7 +880,7 @@ export const prisma = {
             "createdAt" as "createdAt",
             "updatedAt" as "updatedAt"
         `,
-        [args.where.id, args.data.orderStatus ?? null, args.data.paymentStatus ?? null]
+        values
       );
 
       const order = rows[0];
@@ -904,11 +926,11 @@ export const prisma = {
       );
     },
     async findFirst(args: any): Promise<any> {
-      const values: unknown[] = [args.where.phone];
+      const values: unknown[] = [args.where.phone, args.where.customerName];
       const orderIdIsNull = args.where.orderId == null;
       const orderClause = orderIdIsNull
         ? `"orderId" is null`
-        : `"orderId" = $2`;
+        : `"orderId" = $3`;
 
       if (!orderIdIsNull) values.push(args.where.orderId);
 
@@ -922,7 +944,7 @@ export const prisma = {
             "createdAt" as "createdAt",
             "updatedAt" as "updatedAt"
           from "Chat"
-          where phone = $1 and ${orderClause}
+          where phone = $1 and "customerName" = $2 and ${orderClause}
           order by "updatedAt" desc
           limit 1
         `,
@@ -1088,6 +1110,8 @@ export async function disconnectPrisma() {
     global.saswatiDbPool = undefined;
   }
 }
+
+export { query as dbQuery, withTransaction as withDbTransaction };
 
 export function isPrismaConnectionError(error: unknown) {
   if (!(error instanceof Error)) return false;

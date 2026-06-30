@@ -15,6 +15,8 @@ type OrderLike = {
   distanceKm?: number | null;
   address: string;
   landmark?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   paymentScreenshotUrl?: string | null;
   items?: Array<{ itemName: string; quantity: number }>;
 };
@@ -35,6 +37,54 @@ async function sendTelegramMessage(message: string) {
       text: message
     })
   }).catch(() => null);
+}
+
+function buildLocationLine(order: OrderLike) {
+  if (!order.latitude || !order.longitude) return null;
+  return `Location: https://maps.google.com/?q=${order.latitude},${order.longitude}`;
+}
+
+async function getAttachmentFile(url: string, orderNumber: string) {
+  if (url.startsWith("data:")) {
+    const [, mimeType = "application/octet-stream", base64 = ""] =
+      url.match(/^data:([^;]+);base64,(.+)$/) ?? [];
+    const extension = mimeType.split("/")[1] || "bin";
+    return new File([Buffer.from(base64, "base64")], `${orderNumber}-payment-proof.${extension}`, {
+      type: mimeType
+    });
+  }
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Attachment fetch failed with ${response.status}`);
+  }
+
+  const bytes = Buffer.from(await response.arrayBuffer());
+  const mimeType = response.headers.get("content-type") || "application/octet-stream";
+  const extension = mimeType.split("/")[1] || "bin";
+  return new File([bytes], `${orderNumber}-payment-proof.${extension}`, { type: mimeType });
+}
+
+async function sendTelegramAttachment(caption: string, url: string, orderNumber: string) {
+  if (!env.telegramBotToken || !env.telegramChatId || !url) return;
+
+  try {
+    const file = await getAttachmentFile(url, orderNumber);
+    const formData = new FormData();
+    formData.append("chat_id", env.telegramChatId);
+    formData.append("caption", caption.slice(0, 900));
+    formData.append("document", file);
+
+    await fetch(`https://api.telegram.org/bot${env.telegramBotToken}/sendDocument`, {
+      method: "POST",
+      body: formData
+    });
+  } catch (error) {
+    console.error("[telegram:payment-proof-send-failed]", {
+      orderNumber,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
 }
 
 async function sendEmail(subject: string, html: string) {
@@ -60,6 +110,7 @@ async function sendEmail(subject: string, html: string) {
 
 export async function sendNewOrderNotification(order: OrderLike) {
   const items = order.items?.map((item) => `${item.itemName} x${item.quantity}`).join(", ") ?? "";
+  const locationLine = buildLocationLine(order);
   const message = [
     "New order placed",
     `Order ID: ${order.orderNumber}`,
@@ -74,8 +125,11 @@ export async function sendNewOrderNotification(order: OrderLike) {
     `Balance: ₹${order.balanceAmount}`,
     `Distance: ${order.distanceKm?.toFixed(2) ?? "0"} km`,
     `Address: ${order.address}`,
+    locationLine,
     `Screenshot: ${order.paymentScreenshotUrl ?? "Not submitted"}`
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   await Promise.all([
     sendTelegramMessage(message),
@@ -87,18 +141,25 @@ export async function sendPaymentProofNotification(
   order: OrderLike,
   analysis?: PaymentProofAnalysis
 ) {
+  const locationLine = buildLocationLine(order);
   const message = [
     "Payment proof uploaded",
     `Order ID: ${order.orderNumber}`,
     `Name: ${order.customerName}`,
     `Phone: ${order.phone}`,
     `Address: ${order.address}`,
+    locationLine,
     `Proof check: ${formatPaymentProofAnalysis(analysis)}`,
     `Screenshot: ${order.paymentScreenshotUrl ?? "Not submitted"}`
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   await Promise.all([
     sendTelegramMessage(message),
+    order.paymentScreenshotUrl
+      ? sendTelegramAttachment(message, order.paymentScreenshotUrl, order.orderNumber)
+      : Promise.resolve(),
     sendEmail("Payment proof uploaded", `<pre>${message}</pre>`)
   ]);
 }

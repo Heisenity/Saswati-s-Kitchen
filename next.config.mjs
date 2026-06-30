@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const isDev = process.env.NODE_ENV === "development";
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:4001";
-const chatServerUrl = process.env.NEXT_PUBLIC_CHAT_SERVER_URL ?? "http://localhost:4000";
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://ovmvmjgutbdtkxnzkvpb.supabase.co";
 const r2PublicUrl = process.env.R2_PUBLIC_URL ?? "https://pub-9d2bed8b98a0462bb1d4d2a1d7f9fcd6.r2.dev";
@@ -17,16 +16,12 @@ function getOrigin(value) {
 const connectSources = [
   "'self'",
   getOrigin(appUrl),
-  getOrigin(chatServerUrl),
   getOrigin(supabaseUrl),
   "https://*.supabase.co",
   "wss://*.supabase.co",
   appUrl.startsWith("https://")
     ? appUrl.replace("https://", "wss://")
-    : appUrl.replace("http://", "ws://"),
-  chatServerUrl.startsWith("https://")
-    ? chatServerUrl.replace("https://", "wss://")
-    : chatServerUrl.replace("http://", "ws://")
+    : appUrl.replace("http://", "ws://")
 ].filter(Boolean);
 
 const imgSources = [

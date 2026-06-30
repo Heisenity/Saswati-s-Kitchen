@@ -10,7 +10,7 @@ export const orderSchema = z.object({
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   slotType: z.enum(["LUNCH", "DINNER"]),
-  paymentScreenshotUrl: z.string().url().optional(),
+  paymentScreenshotUrl: z.string().min(1).optional(),
   paymentProofAnalysis: paymentProofAnalysisSchema.optional(),
   items: z
     .array(
@@ -29,6 +29,35 @@ export const orderLookupSchema = z.object({
   phone: z.string().min(10)
 });
 
+export const customerChatSessionSchema = z.object({
+  customerName: z.string().min(2).max(40),
+  phone: z.string().min(10).max(16),
+  orderNumber: z.string().min(4).optional().nullable()
+});
+
+export const customerChatMessageSchema = z.object({
+  chatId: z.string().min(6),
+  customerName: z.string().min(2).max(40),
+  phone: z.string().min(10).max(16),
+  message: z.string().min(1).max(4000),
+  clientId: z.string().optional()
+});
+
+export const adminChatMessageSchema = z.object({
+  chatId: z.string().min(6),
+  message: z.string().min(1).max(4000),
+  clientId: z.string().optional()
+});
+
+export const adminPresenceSchema = z.object({
+  online: z.boolean()
+});
+
+export const customerPresenceSchema = z.object({
+  chatId: z.string().min(6),
+  online: z.boolean()
+});
+
 export const geocodeSchema = z.object({
   address: z.string().min(5),
   landmark: z.string().optional()
@@ -42,6 +71,7 @@ export const menuItemSchema = z.object({
   price: z.number().int().min(1),
   imageUrl: z.string().min(1),
   mealType: z.enum(["LUNCH", "DINNER"]),
+  itemKind: z.enum(["THALI", "ADD_ON"]),
   badge: z.string().min(2),
   isActive: z.boolean(),
   stockLimit: z.number().int().min(0),

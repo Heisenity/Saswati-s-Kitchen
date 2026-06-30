@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { PaymentStatus, type SlotType } from "@/lib/db-types";
+import { OrderStatus, PaymentStatus, type SlotType } from "@/lib/db-types";
 import { geocodeAddress } from "@/lib/geocode";
 import { isPrismaConnectionError, isPrismaSchemaMismatchError, prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
@@ -93,6 +93,7 @@ export async function createOrder(input: CreateOrderInput) {
   const advanceAmount = getAdvanceAmount(totalAmount);
   const balanceAmount = totalAmount - advanceAmount;
   const orderNumber = buildOrderNumber();
+  const isPaid = Boolean(input.paymentScreenshotUrl);
 
   const orderData = {
     orderNumber,
@@ -111,7 +112,10 @@ export async function createOrder(input: CreateOrderInput) {
     totalAmount,
     advanceAmount,
     balanceAmount,
-    paymentStatus: PaymentStatus.PENDING_VERIFICATION,
+    paymentStatus: isPaid ? PaymentStatus.CONFIRMED : PaymentStatus.PENDING_VERIFICATION,
+    orderStatus: isPaid
+      ? OrderStatus.CONFIRMED
+      : OrderStatus.PAYMENT_PENDING_VERIFICATION,
     paymentScreenshotUrl: input.paymentScreenshotUrl,
     items: {
       create: input.items.map((item) => ({

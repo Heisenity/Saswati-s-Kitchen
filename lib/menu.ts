@@ -34,6 +34,8 @@ export async function getMenuItems() {
         price: true,
         badge: true,
         imageUrl: true,
+        mealType: true,
+        itemKind: true,
         components: {
           select: {
             itemName: true

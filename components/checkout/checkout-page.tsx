@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LocateFixed, LoaderCircle } from "lucide-react";
+import { CircleCheck, LocateFixed, LoaderCircle } from "lucide-react";
 import { useCart } from "@/components/cart/cart-provider";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { MAX_DELIVERY_DISTANCE_KM, calculateDeliveryCharge, haversineDistanceKm } from "@/lib/delivery";
 import type { PaymentProofAnalysis } from "@/lib/payment-proof";
-import { buildOrderWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { cn, formatCurrency } from "@/lib/utils";
 
 type CheckoutPageProps = {
@@ -55,6 +54,7 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
   const [locating, setLocating] = useState(false);
   const [error, setError] = useState("");
   const [successNote, setSuccessNote] = useState("");
+  const [confirmationOrderNumber, setConfirmationOrderNumber] = useState<string | null>(null);
   const [addressLookupLoading, setAddressLookupLoading] = useState(false);
   const latestUploadRequest = useRef(0);
   const hasLocation =
@@ -192,6 +192,16 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
     return () => window.clearTimeout(timeout);
   }, [address, landmark, location.source]);
 
+  useEffect(() => {
+    if (!confirmationOrderNumber) return;
+
+    const timeout = window.setTimeout(() => {
+      router.push(`/receipt/${confirmationOrderNumber}`);
+    }, 1300);
+
+    return () => window.clearTimeout(timeout);
+  }, [confirmationOrderNumber, router]);
+
   async function handlePaymentProofChange(nextFile: File | null) {
     setUploadedProof(null);
 
@@ -287,20 +297,10 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
       const result = await response.json();
       if (!result.ok) throw new Error(result.error);
 
-      setSuccessNote("Payment proof received. Please also drop a WhatsApp message for faster confirmation.");
+      setSuccessNote("Order placed successfully. Opening your order details…");
       window.localStorage.setItem("saswatis-kitchen-last-order", result.orderNumber);
-      const message = buildOrderWhatsAppMessage({
-        orderNumber: result.orderNumber,
-        customerName,
-        phone,
-        slotType,
-        totalAmount: result.order.totalAmount ?? deliveryPreview.total,
-        advanceAmount: result.order.advanceAmount ?? deliveryPreview.advance,
-        items: items.map((item) => ({ name: item.name, quantity: item.quantity }))
-      });
       clearCart();
-      window.open(buildWhatsAppUrl(message), "_blank", "noopener,noreferrer");
-      router.push(`/receipt/${result.orderNumber}`);
+      setConfirmationOrderNumber(result.orderNumber);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Could not place order.");
     } finally {
@@ -411,12 +411,11 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
                 <div>
                   <p className="font-serif text-2xl">Payment proof</p>
                   <p className="mt-3 text-sm leading-7 text-stone-600">
-                    Upload your payment screenshot. After payment submission, order status becomes Payment Pending Verification.
+                    Upload your payment screenshot or attachment. After submission, your order is confirmed and sent to us instantly.
                   </p>
                   <div className="mt-5 space-y-4">
                     <input
                       type="file"
-                      accept="image/*"
                       className="block w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm"
                       onChange={(event) => handlePaymentProofChange(event.target.files?.[0] ?? null)}
                       required
@@ -426,15 +425,11 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
                     ) : uploadedProof ? (
                       <div className="space-y-1 text-xs">
                         <p className="font-semibold text-leaf">Uploaded: {uploadedProof.fileName}</p>
-                        <p className={uploadedProof.analysis.verdict === "LIKELY_PAYMENT_SCREENSHOT" ? "text-leaf" : "text-primary"}>
-                          Auto-check: {uploadedProof.analysis.summary}. Please also drop a WhatsApp message for faster confirmation.
+                        <p className="text-leaf">
+                          Attachment received. You can submit the order now.
                         </p>
                       </div>
-                    ) : (
-                      <p className="text-xs text-stone-500">
-                        Upload your payment screenshot to unlock the submit button.
-                      </p>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -512,6 +507,26 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
           </div>
         </Card>
       </div>
+      {confirmationOrderNumber ? (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-stone-950/45 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[32px] border border-border bg-white/95 p-7 text-center shadow-[0_24px_80px_rgba(35,35,35,0.18)]">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-leaf/10 text-leaf">
+              <CircleCheck className="h-8 w-8" />
+            </div>
+            <p className="mt-5 text-sm font-semibold uppercase tracking-[0.24em] text-primary">
+              Order confirmed
+            </p>
+            <h2 className="mt-3 font-serif text-3xl text-stone-900">
+              Your meal request is in.
+            </h2>
+            <p className="mt-4 text-sm leading-7 text-stone-600">
+              Order ID <span className="font-semibold text-stone-900">{confirmationOrderNumber}</span>
+              <br />
+              Opening your order details now.
+            </p>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

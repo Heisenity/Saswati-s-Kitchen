@@ -6,16 +6,13 @@
     "dev": "npm run dev:doppler",
     "dev:raw": "next dev -p 4001",
     "dev:doppler": "doppler run -- npm run dev:raw",
-    "dev:chat": "npm run dev:chat:doppler",
-    "dev:chat:raw": "PORT=4000 node --watch --watch-preserve-output --import tsx chat-server/src/index.ts",
-    "dev:chat:doppler": "doppler run -- npm run dev:chat:raw",
     "dev:all": "npm run dev:all:doppler",
     "dev:all:raw": "node scripts/dev-all.mjs",
     "dev:all:doppler": "doppler run -- npm run dev:all:raw",
     "clean": "rm -rf .next .next-dev",
     "build": "next build",
+    "check:menu": "tsx scripts/check-menu-data.ts",
     "start": "next start -p 4001",
-    "start:chat": "PORT=4000 node --import tsx chat-server/src/index.ts",
     "lint": "next lint"
   },
   "dependencies": {

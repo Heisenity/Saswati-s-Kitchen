@@ -15,19 +15,33 @@ type MenuRow = {
   price: number;
   imageUrl: string;
   mealType: "LUNCH" | "DINNER";
+  itemKind: "THALI" | "ADD_ON";
   badge: string;
   isActive: boolean;
   stockLimit: number;
   components: Array<{ itemName: string }>;
 };
 
-function createEmptyForm() {
+type MenuForm = {
+  name: string;
+  description: string;
+  price: string;
+  imageUrl: string;
+  mealType: MenuRow["mealType"];
+  itemKind: MenuRow["itemKind"];
+  badge: string;
+  stockLimit: string;
+  components: string;
+};
+
+function createEmptyForm(mealType: MenuRow["mealType"] = "LUNCH"): MenuForm {
   return {
     name: "",
     description: "",
     price: "149",
     imageUrl: "/brand/chicken-thali.jpg",
-    mealType: "LUNCH",
+    mealType,
+    itemKind: "THALI",
     badge: "Today’s Pick",
     stockLimit: "20",
     components: "Rice, Moosor daal, Aloo potol kosha"
@@ -45,6 +59,8 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
   const [bulkComponent, setBulkComponent] = useState("");
   const [bulkAction, setBulkAction] = useState<"add_component" | "remove_component">("add_component");
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [viewMealType, setViewMealType] = useState<"LUNCH" | "DINNER">("LUNCH");
+  const visibleItems = items.filter((item) => item.mealType === viewMealType);
 
   function syncItems(updater: MenuRow[] | ((current: MenuRow[]) => MenuRow[])) {
     setItems((current) => {
@@ -68,6 +84,7 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
       price: Number(form.price),
       imageUrl: form.imageUrl,
       mealType: form.mealType as "LUNCH" | "DINNER",
+      itemKind: form.itemKind as "THALI" | "ADD_ON",
       badge: form.badge,
       isActive: currentItem?.isActive ?? true,
       stockLimit: Number(form.stockLimit),
@@ -92,7 +109,7 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
         ? current.map((row) => (row.id === result.item.id ? result.item : row))
         : [result.item, ...current]
     );
-    setForm(createEmptyForm());
+    setForm(createEmptyForm(viewMealType));
     setEditingId(null);
     setMessage(editingId ? "Menu item updated." : "Menu item added.");
   }
@@ -122,6 +139,7 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
       price: String(item.price),
       imageUrl: item.imageUrl,
       mealType: item.mealType,
+      itemKind: item.itemKind,
       badge: item.badge,
       stockLimit: String(item.stockLimit),
       components: item.components.map((component) => component.itemName).join(", ")
@@ -131,7 +149,30 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
   function resetForm() {
     setEditingId(null);
     setMessage("");
-    setForm(createEmptyForm());
+    setForm(createEmptyForm(viewMealType));
+  }
+
+  function changeMealType(next: "LUNCH" | "DINNER") {
+    setViewMealType(next);
+    setSelectedIds([]);
+    if (!editingId) setForm(createEmptyForm(next));
+  }
+
+  async function deleteItem(item: MenuRow) {
+    if (!window.confirm(`Delete ${item.name}? This cannot be undone.`)) return;
+
+    const response = await fetch(`/api/admin/menu?id=${encodeURIComponent(item.id)}`, {
+      method: "DELETE"
+    });
+    const result = await response.json();
+    if (!result.ok) {
+      setMessage(result.error ?? "Could not delete menu item.");
+      return;
+    }
+
+    syncItems((current) => current.filter((row) => row.id !== item.id));
+    if (editingId === item.id) resetForm();
+    setMessage("Menu item deleted.");
   }
 
   function toggleSelected(id: string) {
@@ -199,7 +240,23 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+    <div>
+      <div className="mb-6 inline-flex rounded-full border border-border bg-white p-1 shadow-sm">
+        {(["LUNCH", "DINNER"] as const).map((type) => (
+          <button
+            key={type}
+            type="button"
+            aria-pressed={viewMealType === type}
+            onClick={() => changeMealType(type)}
+            className={`rounded-full px-6 py-3 text-sm font-semibold transition ${
+              viewMealType === type ? "bg-primary text-white" : "text-stone-600 hover:bg-muted"
+            }`}
+          >
+            {type === "LUNCH" ? "Lunch menu" : "Dinner menu"}
+          </button>
+        ))}
+      </div>
+      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
       <Card className="p-6">
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">
           {editingId ? "Edit menu item" : "Add menu item"}
@@ -242,6 +299,17 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
               <label className="text-sm font-semibold text-stone-700">Stock limit</label>
               <Input placeholder="20" type="number" min="0" value={form.stockLimit} onChange={(event) => setForm({ ...form, stockLimit: event.target.value })} />
             </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-stone-700">Item category</label>
+            <select
+              className="flex h-12 w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary/50"
+              value={form.itemKind}
+              onChange={(event) => setForm({ ...form, itemKind: event.target.value as "THALI" | "ADD_ON" })}
+            >
+              <option value="THALI">Thali</option>
+              <option value="ADD_ON">Custom dish / add-on</option>
+            </select>
           </div>
           <div className="space-y-3 rounded-3xl border border-border bg-muted/40 p-4">
             <div className="space-y-2">
@@ -323,7 +391,7 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
           </form>
         </Card>
 
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <Card key={item.id} className="p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="flex gap-4">
@@ -343,7 +411,7 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
                   </div>
                   <p className="text-sm text-stone-600">{item.description}</p>
                   <p className="mt-3 text-sm">
-                    {formatCurrency(item.price)} · {item.mealType} · Stock {item.stockLimit}
+                    {formatCurrency(item.price)} · {item.mealType} · {item.itemKind === "ADD_ON" ? "ADD-ON" : "THALI"} · Stock {item.stockLimit}
                   </p>
                   <p className="mt-2 text-xs text-stone-500">
                     {item.components.map((component) => component.itemName).join(" • ")}
@@ -357,10 +425,14 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
                 <Button size="sm" variant={item.isActive ? "outline" : "default"} onClick={() => toggleActive(item)}>
                   {item.isActive ? "Deactivate" : "Activate"}
                 </Button>
+                <Button size="sm" variant="outline" className="text-primary" onClick={() => void deleteItem(item)}>
+                  Delete
+                </Button>
               </div>
             </div>
           </Card>
         ))}
+      </div>
       </div>
     </div>
   );

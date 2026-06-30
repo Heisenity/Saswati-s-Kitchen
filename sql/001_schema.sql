@@ -20,6 +20,7 @@ create table if not exists "MenuItem" (
   price integer not null,
   "imageUrl" text not null,
   "mealType" text not null check ("mealType" in ('LUNCH', 'DINNER')),
+  "itemKind" text not null default 'THALI' check ("itemKind" in ('THALI', 'ADD_ON')),
   badge text not null,
   "isActive" boolean not null default true,
   "availableDate" timestamptz,

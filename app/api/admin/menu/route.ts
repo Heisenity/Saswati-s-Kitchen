@@ -53,6 +53,7 @@ export async function POST(request: Request) {
         price: payload.price,
         imageUrl: payload.imageUrl,
         mealType: payload.mealType,
+        itemKind: payload.itemKind,
         badge: payload.badge,
         isActive: payload.isActive,
         stockLimit: payload.stockLimit,
@@ -108,6 +109,7 @@ export async function PUT(request: Request) {
         price: payload.price,
         imageUrl: payload.imageUrl,
         mealType: payload.mealType,
+        itemKind: payload.itemKind,
         badge: payload.badge,
         isActive: payload.isActive,
         stockLimit: payload.stockLimit,
@@ -201,6 +203,34 @@ export async function PATCH(request: Request) {
     });
 
     return NextResponse.json({ ok: true, items });
+  } catch (error) {
+    return handleAdminError(error);
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const admin = await requireStrictAdminApiSession();
+    const originError = requireTrustedOrigin(request);
+    if (originError) return originError;
+    if (!isDatabaseConfigured()) return rejectJson(400, "Invalid request");
+
+    const id = new URL(request.url).searchParams.get("id");
+    if (!id) return rejectJson(400, "Invalid request");
+
+    const item = await prisma.menuItem.delete({ where: { id } });
+    if (!item) return rejectJson(404, "Menu item not found");
+
+    await logAdminAction({
+      adminId: admin.user.id,
+      email: admin.user.email ?? "",
+      action: "menu.delete",
+      targetType: "menuItem",
+      targetId: id,
+      metadata: { name: item.name }
+    });
+
+    return NextResponse.json({ ok: true });
   } catch (error) {
     return handleAdminError(error);
   }

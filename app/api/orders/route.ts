@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ZodError } from "zod";
 import { createOrder } from "@/lib/orders";
 import { isPrismaConnectionError } from "@/lib/prisma";
 import { applyRateLimit, rejectJson, requireTrustedOrigin } from "@/lib/security";
@@ -40,6 +41,12 @@ export async function POST(request: Request) {
   } catch (error) {
     if (isPrismaConnectionError(error)) {
       return rejectJson(400, "Ordering is temporarily unavailable. Please try again shortly.");
+    }
+    if (error instanceof ZodError) {
+      return rejectJson(400, error.issues[0]?.message ?? "Invalid request");
+    }
+    if (error instanceof Error) {
+      return rejectJson(400, error.message);
     }
     return rejectJson(400, "Invalid request");
   }

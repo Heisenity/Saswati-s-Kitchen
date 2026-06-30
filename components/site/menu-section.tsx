@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { Plus, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCart } from "@/components/cart/cart-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,31 +23,67 @@ type MenuSectionProps = {
     price: number;
     badge: string;
     imageUrl: string;
+    mealType: "LUNCH" | "DINNER";
+    itemKind: "THALI" | "ADD_ON";
     components: Array<{ itemName: string }>;
   }>;
 };
 
+type VisibleMealType = "LUNCH" | "DINNER";
+
 export function MenuSection({ items }: MenuSectionProps) {
   const [authNext, setAuthNext] = useState("/");
   const [authOpen, setAuthOpen] = useState(false);
+  const [mealType, setMealType] = useState<VisibleMealType>("LUNCH");
+  const thalis = items.filter((item) => item.itemKind === "THALI" && item.mealType === mealType);
+  const addOns = items.filter((item) => item.itemKind === "ADD_ON" && item.mealType === mealType);
+
+  useEffect(() => {
+    function changeMenu(event: Event) {
+      const nextMealType = (event as CustomEvent<VisibleMealType>).detail;
+      if (nextMealType === "LUNCH" || nextMealType === "DINNER") setMealType(nextMealType);
+    }
+
+    window.addEventListener("menu-filter", changeMenu);
+    return () => window.removeEventListener("menu-filter", changeMenu);
+  }, []);
 
   return (
     <section id="menu" className="section-padding">
       <div className="mx-auto max-w-7xl">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.26em] text-primary">
-              Today’s Lunch Menu
+              Today’s {mealType === "LUNCH" ? "Lunch" : "Dinner"} Menu
             </p>
-            <h2 className="mt-3 font-serif text-4xl">Lunch thalis made for daily comfort</h2>
+            <h2 className="mt-3 font-serif text-4xl">
+              {mealType === "LUNCH" ? "Lunch" : "Dinner"} thalis made for daily comfort
+            </h2>
           </div>
-          <p className="max-w-lg text-sm leading-7 text-stone-600">
-            Cooked fresh daily. Limited preparation for freshness, so once a thali is sold out we stop taking more orders.
-          </p>
+          <div className="flex flex-col gap-4 sm:items-end">
+            <div className="inline-flex w-fit rounded-full border border-border bg-white p-1 shadow-sm" aria-label="Choose menu">
+              {(["LUNCH", "DINNER"] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  aria-pressed={mealType === type}
+                  onClick={() => setMealType(type)}
+                  className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${
+                    mealType === type ? "bg-primary text-white shadow-sm" : "text-stone-600 hover:bg-muted"
+                  }`}
+                >
+                  {type === "LUNCH" ? "Lunch" : "Dinner"}
+                </button>
+              ))}
+            </div>
+            <p className="max-w-lg text-sm leading-7 text-stone-600">
+              Cooked fresh daily in limited batches for freshness.
+            </p>
+          </div>
         </div>
 
-        <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {items.map((item, index) => (
+        <div key={mealType} className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3 animate-[menu-fade_.28s_ease-out]">
+          {thalis.map((item) => (
             <MenuCard
               item={item}
               key={item.id}
@@ -58,6 +94,25 @@ export function MenuSection({ items }: MenuSectionProps) {
             />
           ))}
         </div>
+
+        {addOns.length ? (
+          <div className="mt-14 border-t border-border pt-10">
+            <p className="text-sm font-semibold uppercase tracking-[0.26em] text-primary">Customise your meal</p>
+            <h3 className="mt-3 font-serif text-3xl">Add a little extra</h3>
+            <div key={`addons-${mealType}`} className="mt-7 grid gap-6 md:grid-cols-2 xl:grid-cols-3 animate-[menu-fade_.28s_ease-out]">
+              {addOns.map((item) => (
+                <MenuCard
+                  item={item}
+                  key={item.id}
+                  onAuthRequired={(next) => {
+                    setAuthNext(next);
+                    setAuthOpen(true);
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
       {authOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

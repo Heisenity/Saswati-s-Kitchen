@@ -1,4 +1,5 @@
 export type MealType = "LUNCH" | "DINNER";
+export type MenuItemKind = "THALI" | "ADD_ON";
 export type PaymentStatus = "PENDING_VERIFICATION" | "CONFIRMED" | "REJECTED";
 export type OrderStatus =
   | "PAYMENT_PENDING_VERIFICATION"
@@ -16,6 +17,7 @@ export type MenuSeed = {
   badge: string;
   imageUrl: string;
   mealType: MealType;
+  itemKind: MenuItemKind;
   stockLimit: number;
   components: string[];
 };

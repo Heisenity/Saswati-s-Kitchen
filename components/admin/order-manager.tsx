@@ -33,6 +33,19 @@ const statuses = [
 export function OrderManager({ initialOrders }: { initialOrders: OrderRow[] }) {
   const [orders, setOrders] = useState(initialOrders);
   const [filter, setFilter] = useState("ALL");
+  const [expandedProofId, setExpandedProofId] = useState<string | null>(null);
+
+  function isPdfProof(url: string) {
+    return url.startsWith("data:application/pdf") || url.toLowerCase().includes(".pdf");
+  }
+
+  function getProofDownloadName(order: OrderRow) {
+    if (!order.paymentScreenshotUrl) return `${order.orderNumber}-payment-proof`;
+    if (order.paymentScreenshotUrl.startsWith("data:application/pdf")) {
+      return `${order.orderNumber}-payment-proof.pdf`;
+    }
+    return `${order.orderNumber}-payment-proof.jpg`;
+  }
 
   async function updateStatus(id: string, orderStatus: string) {
     const response = await fetch(`/api/admin/orders/${id}/status`, {
@@ -88,9 +101,47 @@ export function OrderManager({ initialOrders }: { initialOrders: OrderRow[] }) {
                 Total {formatCurrency(order.totalAmount)} | Advance {formatCurrency(order.advanceAmount)}
               </p>
               {order.paymentScreenshotUrl ? (
-                <a href={order.paymentScreenshotUrl} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-semibold text-primary">
-                  View payment proof
-                </a>
+                <div className="mt-4 space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setExpandedProofId((current) =>
+                          current === order.id ? null : order.id
+                        )
+                      }
+                    >
+                      {expandedProofId === order.id ? "Hide payment proof" : "View payment proof"}
+                    </Button>
+                    <a
+                      href={order.paymentScreenshotUrl}
+                      download={getProofDownloadName(order)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-9 items-center rounded-full border border-border px-4 text-sm font-semibold text-primary transition hover:bg-primary/5"
+                    >
+                      Download proof
+                    </a>
+                  </div>
+                  {expandedProofId === order.id ? (
+                    <div className="rounded-[24px] border border-border bg-muted/40 p-4">
+                      {isPdfProof(order.paymentScreenshotUrl) ? (
+                        <p className="text-sm text-stone-600">
+                          PDF proof uploaded. Use download to open the file.
+                        </p>
+                      ) : (
+                        <img
+                          src={order.paymentScreenshotUrl}
+                          alt={`Payment proof for ${order.orderNumber}`}
+                          className="max-h-96 w-full rounded-[20px] border border-border bg-white object-contain"
+                          loading="lazy"
+                        />
+                      )}
+                    </div>
+                  ) : null}
+                </div>
               ) : null}
             </div>
             <div className="w-full max-w-xs rounded-3xl border border-border bg-white p-4">

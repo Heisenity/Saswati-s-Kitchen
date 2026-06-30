@@ -28,22 +28,16 @@ function shutdown(code = 0) {
 }
 
 async function main() {
-  killPort(4000);
   killPort(4001);
 
   const web = spawn("npx", ["next", "dev", "-p", "4001"], {
     stdio: "inherit",
     env: process.env
   });
-  const chat = spawn("node", ["--watch", "--watch-preserve-output", "--import", "tsx", "chat-server/src/index.ts"], {
-    stdio: "inherit",
-    env: { ...process.env, PORT: "4000" }
-  });
 
-  children.push(web, chat);
+  children.push(web);
 
   web.on("exit", (code) => shutdown(code ?? 0));
-  chat.on("exit", (code) => shutdown(code ?? 0));
 }
 
 process.on("SIGINT", () => shutdown(0));

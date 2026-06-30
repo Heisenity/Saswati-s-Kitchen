@@ -141,4 +141,82 @@ values
   ('veg-thali-6', 'veg-thali', 'Papad'),
   ('veg-thali-7', 'veg-thali', 'Salad');
 
+insert into "MenuItem" (
+  id, name, slug, description, price, "imageUrl", "mealType", "itemKind", badge,
+  "isActive", "stockLimit", "createdAt", "updatedAt"
+)
+values
+  ('dinner-chicken-thali', 'Chicken Thali', 'dinner-chicken-thali', 'Homestyle chicken curry with a comforting Bengali dinner spread.', 149, '/brand/chicken-thali.jpg', 'DINNER', 'THALI', 'Dinner Favourite', true, 24, now(), now()),
+  ('dinner-katlaa-macher-thali', 'Katlaa Macher Thali', 'dinner-katlaa-macher-thali', 'Classic Katla curry served with a fresh Bengali dinner spread.', 139, '/brand/katlaa-thali.jpg', 'DINNER', 'THALI', 'Bengali Classic', true, 22, now(), now()),
+  ('dinner-egg-thali', 'Egg Thali', 'dinner-egg-thali', 'Simple egg curry and Bengali sides for a filling dinner.', 99, '/brand/egg-thali.jpg', 'DINNER', 'THALI', 'Budget Favourite', true, 25, now(), now()),
+  ('dinner-veg-thali', 'Veg Thali', 'dinner-veg-thali', 'Light vegetarian Bengali dinner with dhokar dalna.', 89, '/brand/veg-thali.jpg', 'DINNER', 'THALI', 'Veg Comfort', true, 26, now(), now()),
+  ('addon-roti', 'Roti', 'addon-roti', 'Fresh soft roti to add to any meal.', 5, '/brand/veg-thali.jpg', 'LUNCH', 'ADD_ON', 'Add-on', true, 100, now(), now()),
+  ('addon-extra-rice', 'Extra Rice', 'addon-extra-rice', 'An extra serving of steamed rice.', 20, '/brand/veg-thali.jpg', 'LUNCH', 'ADD_ON', 'Add-on', true, 60, now(), now()),
+  ('addon-chicken-curry-plate', 'Chicken Curry Plate', 'addon-chicken-curry-plate', 'Homestyle Bengali chicken curry plate.', 80, '/brand/chicken-thali.jpg', 'LUNCH', 'ADD_ON', 'Add-on', true, 30, now(), now()),
+  ('dinner-addon-roti', 'Roti', 'dinner-addon-roti', 'Fresh soft roti to add to any meal.', 5, '/brand/veg-thali.jpg', 'DINNER', 'ADD_ON', 'Add-on', true, 100, now(), now()),
+  ('dinner-addon-extra-rice', 'Extra Rice', 'dinner-addon-extra-rice', 'An extra serving of steamed rice.', 20, '/brand/veg-thali.jpg', 'DINNER', 'ADD_ON', 'Add-on', true, 60, now(), now()),
+  ('dinner-addon-chicken-curry-plate', 'Chicken Curry Plate', 'dinner-addon-chicken-curry-plate', 'Homestyle Bengali chicken curry plate.', 80, '/brand/chicken-thali.jpg', 'DINNER', 'ADD_ON', 'Add-on', true, 30, now(), now())
+on conflict (slug) do update set
+  name = excluded.name,
+  description = excluded.description,
+  price = excluded.price,
+  "imageUrl" = excluded."imageUrl",
+  "mealType" = excluded."mealType",
+  "itemKind" = excluded."itemKind",
+  badge = excluded.badge,
+  "isActive" = excluded."isActive",
+  "stockLimit" = excluded."stockLimit",
+  "updatedAt" = now();
+
+delete from "MenuItemComponent"
+where "menuItemId" in (
+  'dinner-chicken-thali',
+  'dinner-katlaa-macher-thali',
+  'dinner-egg-thali',
+  'dinner-veg-thali',
+  'addon-roti',
+  'addon-extra-rice',
+  'addon-chicken-curry-plate',
+  'dinner-addon-roti',
+  'dinner-addon-extra-rice',
+  'dinner-addon-chicken-curry-plate'
+);
+
+insert into "MenuItemComponent" (id, "menuItemId", "itemName")
+values
+  ('dinner-chicken-thali-1', 'dinner-chicken-thali', 'Rice'),
+  ('dinner-chicken-thali-2', 'dinner-chicken-thali', 'Moosor daal'),
+  ('dinner-chicken-thali-3', 'dinner-chicken-thali', 'Mochar Ghanto (Banana Flower)'),
+  ('dinner-chicken-thali-4', 'dinner-chicken-thali', 'Chicken Curry (2 pcs)'),
+  ('dinner-chicken-thali-5', 'dinner-chicken-thali', 'Chutney/aachar'),
+  ('dinner-chicken-thali-6', 'dinner-chicken-thali', 'Papad'),
+  ('dinner-chicken-thali-7', 'dinner-chicken-thali', 'Salad'),
+  ('dinner-katlaa-macher-thali-1', 'dinner-katlaa-macher-thali', 'Rice'),
+  ('dinner-katlaa-macher-thali-2', 'dinner-katlaa-macher-thali', 'Moosor daal'),
+  ('dinner-katlaa-macher-thali-3', 'dinner-katlaa-macher-thali', 'Mochar Ghanto (Banana Flower)'),
+  ('dinner-katlaa-macher-thali-4', 'dinner-katlaa-macher-thali', 'Katla curry (1 pc)'),
+  ('dinner-katlaa-macher-thali-5', 'dinner-katlaa-macher-thali', 'Chutney/aachar'),
+  ('dinner-katlaa-macher-thali-6', 'dinner-katlaa-macher-thali', 'Papad'),
+  ('dinner-katlaa-macher-thali-7', 'dinner-katlaa-macher-thali', 'Salad'),
+  ('dinner-egg-thali-1', 'dinner-egg-thali', 'Rice'),
+  ('dinner-egg-thali-2', 'dinner-egg-thali', 'Moosor daal'),
+  ('dinner-egg-thali-3', 'dinner-egg-thali', 'Mochar Ghanto (Banana Flower)'),
+  ('dinner-egg-thali-4', 'dinner-egg-thali', 'Egg curry (1 pc)'),
+  ('dinner-egg-thali-5', 'dinner-egg-thali', 'Chutney/aachar'),
+  ('dinner-egg-thali-6', 'dinner-egg-thali', 'Papad'),
+  ('dinner-egg-thali-7', 'dinner-egg-thali', 'Salad'),
+  ('dinner-veg-thali-1', 'dinner-veg-thali', 'Rice'),
+  ('dinner-veg-thali-2', 'dinner-veg-thali', 'Moong daal'),
+  ('dinner-veg-thali-3', 'dinner-veg-thali', 'Mochar Ghanto (Banana Flower)'),
+  ('dinner-veg-thali-4', 'dinner-veg-thali', 'Dhokar dalna'),
+  ('dinner-veg-thali-5', 'dinner-veg-thali', 'Chutney/aachar'),
+  ('dinner-veg-thali-6', 'dinner-veg-thali', 'Papad'),
+  ('dinner-veg-thali-7', 'dinner-veg-thali', 'Salad'),
+  ('addon-roti-1', 'addon-roti', '1 piece'),
+  ('addon-extra-rice-1', 'addon-extra-rice', '1 serving'),
+  ('addon-chicken-curry-plate-1', 'addon-chicken-curry-plate', 'Chicken Curry (3 pcs)'),
+  ('dinner-addon-roti-1', 'dinner-addon-roti', '1 piece'),
+  ('dinner-addon-extra-rice-1', 'dinner-addon-extra-rice', '1 serving'),
+  ('dinner-addon-chicken-curry-plate-1', 'dinner-addon-chicken-curry-plate', 'Chicken Curry (3 pcs)');
+
 commit;

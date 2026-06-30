@@ -1,13 +1,17 @@
 "use client";
 
-import { io, type Socket } from "socket.io-client";
 import { useEffect, useRef, useState } from "react";
 import { FileText, LoaderCircle, Paperclip, SendHorizontal } from "lucide-react";
-import { publicEnv } from "@/lib/public-env";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { formatChatTime, parseChatAttachment, serializeChatAttachment, type ChatAttachment } from "@/lib/chat";
+import {
+  formatChatTime,
+  parseChatAttachment,
+  serializeChatAttachment,
+  type ChatAttachment
+} from "@/lib/chat";
 import { cn } from "@/lib/utils";
 
 type Message = {
@@ -17,6 +21,7 @@ type Message = {
   senderName: string;
   message: string;
   createdAt: string;
+  clientId?: string;
 };
 
 type Thread = {
@@ -25,22 +30,34 @@ type Thread = {
   phone: string;
   orderId?: string | null;
   unreadCount?: number;
+  customerOnline?: boolean;
+  customerLastSeenAt?: string | null;
   messages?: Message[];
 };
 
 type TypingState = {
-  chatId?: string;
   typing: boolean;
   senderType: "CUSTOMER" | "ADMIN";
 };
 
-function appendUniqueMessage(messages: Message[] = [], nextMessage: Message) {
-  if (messages.some((message) => message.id === nextMessage.id)) return messages;
-  return [...messages, nextMessage];
+function dedupeMessages(messages: Message[] = []) {
+  return messages.filter(
+    (message, index, current) =>
+      current.findIndex((entry) => entry.id === message.id) === index
+  );
 }
 
-function mergeUniqueMessages(messages: Message[] = [], nextMessages: Message[] = []) {
-  return nextMessages.reduce((current, message) => appendUniqueMessage(current, message), messages);
+function appendUniqueMessage(messages: Message[] = [], nextMessage: Message) {
+  const optimisticIndex = nextMessage.clientId
+    ? messages.findIndex((message) => message.id === nextMessage.clientId)
+    : -1;
+
+  if (optimisticIndex >= 0) {
+    return messages.map((message, index) => (index === optimisticIndex ? nextMessage : message));
+  }
+
+  if (messages.some((message) => message.id === nextMessage.id)) return messages;
+  return [...messages, nextMessage];
 }
 
 function getThreadPreview(thread: Thread) {
@@ -52,16 +69,24 @@ function getThreadPreview(thread: Thread) {
   return lastMessage.message;
 }
 
+function formatLastSeen(value?: string | null) {
+  if (!value) return "Offline";
+
+  return `Last seen ${new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Asia/Kolkata"
+  }).format(new Date(value))}`;
+}
+
 function AttachmentBubble({ attachment }: { attachment: ChatAttachment }) {
   const isImage = attachment.mimeType.startsWith("image/");
 
   return (
-    <a
-      href={attachment.url}
-      target="_blank"
-      rel="noreferrer"
-      className="block space-y-3"
-    >
+    <a href={attachment.url} target="_blank" rel="noreferrer" className="block space-y-3">
       {isImage ? (
         <img
           src={attachment.url}
@@ -109,7 +134,9 @@ function MessageBubble({
         {attachment ? <AttachmentBubble attachment={attachment} /> : message.message}
       </div>
       <div className="mt-1 px-1 text-[11px] text-stone-500">
-        <span className="font-medium">{message.senderType === "ADMIN" ? "Admin" : customerName || message.senderName}</span>
+        <span className="font-medium">
+          {message.senderType === "ADMIN" ? "Admin" : customerName || message.senderName}
+        </span>
         {" · "}
         {formatChatTime(message.createdAt)}
       </div>
@@ -117,17 +144,24 @@ function MessageBubble({
   );
 }
 
-export function AdminChatPanel({ accessToken }: { accessToken: string }) {
+async function parseJson<T>(response: Response): Promise<T> {
+  return response.json() as Promise<T>;
+}
+
+export function AdminChatPanel() {
+  const supabase = useRef(createClient()).current;
+  const discoveryChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const roomChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeThreadIdRef = useRef<string | null>(null);
   const [threads, setThreads] = useState<Thread[]>([]);
   const [activeThread, setActiveThread] = useState<Thread | null>(null);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [typingState, setTypingState] = useState<TypingState | null>(null);
-  const socketRef = useRef<Socket | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const activeThreadIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     activeThreadIdRef.current = activeThread?.id ?? null;
@@ -137,109 +171,289 @@ export function AdminChatPanel({ accessToken }: { accessToken: string }) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [activeThread?.messages, typingState]);
 
-  useEffect(() => {
-    if (!accessToken) {
-      setError("Admin session missing. Please sign in again.");
+  async function fetchThreads() {
+    const response = await fetch("/api/admin/chat/threads");
+    const result = await parseJson<{ ok: boolean; threads?: Thread[]; error?: string }>(response);
+
+    if (!result.ok || !result.threads) {
+      setError(result.error ?? "Could not load chat threads.");
       return;
     }
 
-    const socket = io(publicEnv.chatServerUrl, {
-      transports: ["websocket"],
-      auth: {
-        role: "admin",
-        accessToken
-      }
+    setError("");
+    setThreads(result.threads);
+    setActiveThread((current) =>
+      current
+        ? (() => {
+            const refreshed = result.threads?.find((thread) => thread.id === current.id);
+            return refreshed
+              ? {
+                  ...current,
+                  ...refreshed,
+                  messages: dedupeMessages(current.messages)
+                }
+              : current;
+          })()
+        : current
+    );
+  }
+
+  async function openThread(thread: Thread) {
+    const response = await fetch(`/api/admin/chat/threads/${thread.id}`);
+    const result = await parseJson<{ ok: boolean; thread?: Thread; error?: string }>(response);
+
+    if (!result.ok || !result.thread) {
+      setError(result.error ?? "Could not open this conversation.");
+      return;
+    }
+
+    setError("");
+    setTypingState(null);
+    setActiveThread({
+      ...result.thread,
+      messages: dedupeMessages(result.thread.messages)
+    });
+    setThreads((current) =>
+      current.map((entry) =>
+        entry.id === result.thread?.id ? { ...entry, ...result.thread, unreadCount: 0 } : entry
+      )
+    );
+  }
+
+  useEffect(() => {
+    void fetchThreads();
+
+    const presenceBody = JSON.stringify({ online: true });
+    void fetch("/api/admin/chat/presence", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: presenceBody
     });
 
-    socket.on("connect", () => setError(""));
-    socket.on("connect_error", () => {
-      setError("Could not verify admin chat access.");
-    });
-    socket.on("admin:threads", (nextThreads: Thread[]) => {
-      setThreads(nextThreads);
-      setActiveThread((current) => {
-        if (!current) return current;
-        const refreshed = nextThreads.find((thread) => thread.id === current.id);
-        return refreshed
-          ? {
-              ...current,
-              ...refreshed,
-              messages:
-                current.messages?.length
-                  ? mergeUniqueMessages(current.messages, refreshed.messages)
-                  : refreshed.messages ?? current.messages
-            }
-          : current;
+    heartbeatRef.current = setInterval(() => {
+      void fetch("/api/admin/chat/presence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: presenceBody
       });
-    });
-    socket.on("admin:thread", (thread: Thread) => {
-      setActiveThread(thread);
-      setThreads((current) =>
-        current.some((entry) => entry.id === thread.id)
-          ? current.map((entry) => (entry.id === thread.id ? { ...entry, ...thread } : entry))
-          : [thread, ...current]
-      );
-    });
-    socket.on("chat:typing", (nextTypingState: TypingState) => {
-      if (nextTypingState.senderType === "CUSTOMER") {
-        setTypingState(nextTypingState);
+    }, 30_000);
+
+    const discoveryChannel = supabase
+      .channel("chat-admin-discovery", {
+        config: { broadcast: { self: true } }
+      })
+      .on("broadcast", { event: "refresh" }, () => {
+        void fetchThreads();
+      })
+      .subscribe();
+
+    discoveryChannelRef.current = discoveryChannel;
+
+    return () => {
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+      void fetch("/api/admin/chat/presence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ online: false }),
+        keepalive: true
+      });
+      if (discoveryChannelRef.current) {
+        void supabase.removeChannel(discoveryChannelRef.current);
+        discoveryChannelRef.current = null;
+      }
+    };
+  }, [supabase]);
+
+  useEffect(() => {
+    if (!activeThread?.id) {
+      if (roomChannelRef.current) {
+        void supabase.removeChannel(roomChannelRef.current);
+        roomChannelRef.current = null;
+      }
+      return;
+    }
+
+    if (roomChannelRef.current) {
+      void supabase.removeChannel(roomChannelRef.current);
+      roomChannelRef.current = null;
+    }
+
+    const roomChannel = supabase
+      .channel(`chat:${activeThread.id}`, {
+        config: { broadcast: { self: true, ack: true } }
+      })
+      .on("broadcast", { event: "message" }, ({ payload }) => {
+        const message = payload as Message;
+        setActiveThread((current) =>
+          current?.id === message.chatId
+            ? {
+                ...current,
+                unreadCount: 0,
+                messages: dedupeMessages(appendUniqueMessage(current.messages, message))
+              }
+            : current
+        );
+        setThreads((current) =>
+          current.map((thread) =>
+            thread.id === message.chatId
+              ? {
+                  ...thread,
+                  unreadCount:
+                    message.senderType === "CUSTOMER" && activeThreadIdRef.current !== thread.id
+                      ? (thread.unreadCount ?? 0) + 1
+                      : 0,
+                  messages: [message]
+                }
+              : thread
+          )
+        );
+      })
+      .on("broadcast", { event: "presence" }, ({ payload }) => {
+        const next = payload as { chatId?: string; online?: boolean; lastSeenAt?: string | null };
+        if (!next.chatId) return;
+
+        setActiveThread((current) => {
+          if (!current || current.id !== next.chatId) return current;
+
+          return {
+            ...current,
+            customerOnline: Boolean(next.online),
+            customerLastSeenAt: next.lastSeenAt ?? null
+          };
+        });
+        setThreads((current) =>
+          current.map((thread) =>
+            thread.id === next.chatId
+              ? {
+                  ...thread,
+                  customerOnline: Boolean(next.online),
+                  customerLastSeenAt: next.lastSeenAt ?? null
+                }
+              : thread
+          )
+        );
+      })
+      .on("broadcast", { event: "typing" }, ({ payload }) => {
+        const next = payload as TypingState;
+        if (next.senderType === "CUSTOMER") {
+          setTypingState(next);
+        }
+      })
+      .on("broadcast", { event: "seen" }, () => {
+        setThreads((current) =>
+          current.map((thread) =>
+            thread.id === activeThreadIdRef.current ? { ...thread, unreadCount: 0 } : thread
+          )
+        );
+      })
+      .subscribe();
+
+    roomChannelRef.current = roomChannel;
+
+    return () => {
+      if (roomChannelRef.current) {
+        void supabase.removeChannel(roomChannelRef.current);
+        roomChannelRef.current = null;
+      }
+    };
+  }, [activeThread?.id, supabase]);
+
+  function sendTyping(value: boolean) {
+    roomChannelRef.current?.send({
+      type: "broadcast",
+      event: "typing",
+      payload: {
+        typing: value,
+        senderType: "ADMIN"
       }
     });
-    socket.on("chat:message", (message: Message) => {
+  }
+
+  async function sendMessage(messageText: string) {
+    if (!activeThread || !messageText.trim()) return;
+
+    const clientId = crypto.randomUUID();
+    const optimistic = {
+      id: clientId,
+      chatId: activeThread.id,
+      senderType: "ADMIN" as const,
+      senderName: "Admin",
+      message: messageText.trim(),
+      createdAt: new Date().toISOString(),
+      clientId
+    };
+
+    setActiveThread((current) =>
+      current?.id === activeThread.id
+        ? {
+            ...current,
+            messages: [...(current.messages ?? []), optimistic]
+          }
+        : current
+    );
+    setThreads((current) =>
+      current.map((thread) =>
+        thread.id === activeThread.id ? { ...thread, messages: [optimistic] } : thread
+      )
+    );
+
+    const response = await fetch("/api/admin/chat/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chatId: activeThread.id,
+        message: messageText,
+        clientId
+      })
+    });
+    const result = await parseJson<{ ok: boolean; message?: Message; error?: string }>(response);
+
+    if (!result.ok || !result.message) {
+      setError(result.error ?? "Could not send message right now.");
+      setActiveThread((current) =>
+        current?.id === activeThread.id
+          ? {
+              ...current,
+              messages: current.messages?.filter((entry) => entry.id !== clientId)
+            }
+          : current
+      );
       setThreads((current) =>
         current.map((thread) =>
-          thread.id === message.chatId
+          thread.id === activeThread.id
             ? {
                 ...thread,
-                unreadCount:
-                  message.senderType === "CUSTOMER"
-                    ? (thread.unreadCount ?? 0) + (activeThreadIdRef.current === thread.id ? 0 : 1)
-                    : thread.unreadCount ?? 0,
-                messages: appendUniqueMessage(thread.messages, message)
+                messages: thread.messages?.filter((entry) => entry.id !== clientId)
               }
             : thread
         )
       );
-      setActiveThread((current) =>
-        current?.id === message.chatId
-          ? {
-              ...current,
-              unreadCount: 0,
-              messages: appendUniqueMessage(current.messages, message)
-            }
-          : current
-      );
-    });
+      return;
+    }
 
-    socketRef.current = socket;
-
-    return () => {
-      socket.disconnect();
-      socketRef.current = null;
-    };
-  }, [accessToken]);
-
-  function openThread(thread: Thread) {
+    setError("");
+    const confirmedMessage = { ...result.message, clientId } as Message;
     setActiveThread((current) =>
-      current?.id === thread.id
-        ? current
-        : {
-            ...thread,
-            messages: thread.messages ?? []
-          }
+      current?.id === activeThread.id
+        ? {
+          ...current,
+          messages: dedupeMessages(appendUniqueMessage(current.messages, confirmedMessage))
+        }
+        : current
     );
-    setTypingState(null);
-    socketRef.current?.emit("admin:open-thread", { chatId: thread.id });
+    setThreads((current) =>
+      current.map((thread) =>
+        thread.id === activeThread.id ? { ...thread, messages: [confirmedMessage] } : thread
+      )
+    );
   }
 
-  function sendMessage() {
+  async function handleSend() {
     if (!text.trim() || !activeThread) return;
-
-    socketRef.current?.emit("chat:message", {
-      chatId: activeThread.id,
-      message: text.trim()
-    });
+    const messageText = text.trim();
     setText("");
+    sendTyping(false);
+    await sendMessage(messageText);
   }
 
   async function uploadAttachment(file: File) {
@@ -266,29 +480,33 @@ export function AdminChatPanel({ accessToken }: { accessToken: string }) {
       method: "POST",
       body: formData
     });
-    const result = await response.json();
+    const result = await parseJson<{
+      ok: boolean;
+      url?: string;
+      name?: string;
+      mimeType?: string;
+      error?: string;
+    }>(response);
     setUploadingAttachment(false);
 
-    if (!result.ok) {
+    if (!result.ok || !result.url || !result.name || !result.mimeType) {
       setError(result.error ?? "Could not upload the attachment.");
       return;
     }
 
-    socketRef.current?.emit("chat:message", {
-      chatId: activeThread.id,
-      message: serializeChatAttachment({
+    await sendMessage(
+      serializeChatAttachment({
         url: result.url,
         name: result.name,
         mimeType: result.mimeType
       })
-    });
+    );
   }
 
   const customerTyping =
     Boolean(activeThread?.id) &&
     typingState?.typing &&
-    typingState.senderType === "CUSTOMER" &&
-    typingState.chatId === activeThread?.id;
+    typingState.senderType === "CUSTOMER";
 
   return (
     <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
@@ -296,7 +514,9 @@ export function AdminChatPanel({ accessToken }: { accessToken: string }) {
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="font-serif text-2xl">Conversations</p>
-            <p className="mt-1 text-sm text-stone-500">Open any customer thread and reply in real time.</p>
+            <p className="mt-1 text-sm text-stone-500">
+              Open any customer thread and reply in real time.
+            </p>
           </div>
           <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-stone-600">
             {threads.length} active
@@ -316,12 +536,15 @@ export function AdminChatPanel({ accessToken }: { accessToken: string }) {
                     ? "border-primary bg-primary/5 shadow-sm"
                     : "border-border bg-white hover:border-primary/30 hover:bg-white"
                 )}
-                onClick={() => openThread(thread)}
+                onClick={() => void openThread(thread)}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-stone-900">{thread.customerName}</p>
                     <p className="text-xs text-stone-500">{thread.phone}</p>
+                    <p className="mt-1 text-[11px] text-stone-500">
+                      {thread.customerOnline ? "Online now" : formatLastSeen(thread.customerLastSeenAt)}
+                    </p>
                   </div>
                   {thread.unreadCount ? (
                     <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-white">
@@ -339,16 +562,25 @@ export function AdminChatPanel({ accessToken }: { accessToken: string }) {
       <Card className="flex min-h-[720px] flex-col overflow-hidden p-0">
         <div className="border-b border-border px-5 py-4">
           <p className="font-serif text-2xl">{activeThread?.customerName ?? "Select a thread"}</p>
-          <p className="mt-1 text-sm text-stone-500">
-            {activeThread ? `${activeThread.phone}${activeThread.orderId ? ` · Order linked` : ""}` : "Customer messages will appear here in a WhatsApp-style thread."}
-          </p>
+          {activeThread ? (
+            <p className="mt-1 text-sm text-stone-500">
+              {`${activeThread.phone}${activeThread.orderId ? ` · Order linked` : ""}`}
+            </p>
+          ) : null}
+          {activeThread ? (
+            <p className="mt-1 text-xs font-medium text-stone-500">
+              {activeThread.customerOnline
+                ? "Online now"
+                : formatLastSeen(activeThread.customerLastSeenAt)}
+            </p>
+          ) : null}
         </div>
 
         <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto bg-muted/60 px-4 py-5">
           {activeThread?.messages?.length ? (
-            activeThread.messages.map((message) => (
+            activeThread.messages.map((message, index) => (
               <MessageBubble
-                key={message.id}
+                key={`${message.id}-${index}`}
                 message={message}
                 customerName={activeThread.customerName}
               />
@@ -374,7 +606,11 @@ export function AdminChatPanel({ accessToken }: { accessToken: string }) {
               disabled={!activeThread || uploadingAttachment}
               aria-label="Upload attachment"
             >
-              {uploadingAttachment ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+              {uploadingAttachment ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <Paperclip className="h-4 w-4" />
+              )}
             </button>
             <Input
               placeholder={activeThread ? "Reply to customer" : "Select a thread first"}
@@ -382,21 +618,16 @@ export function AdminChatPanel({ accessToken }: { accessToken: string }) {
               disabled={!activeThread}
               onChange={(event) => {
                 setText(event.target.value);
-                if (activeThread) {
-                  socketRef.current?.emit("chat:typing", {
-                    typing: Boolean(event.target.value.trim()),
-                    chatId: activeThread.id
-                  });
-                }
+                sendTyping(Boolean(event.target.value.trim()));
               }}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
-                  sendMessage();
+                  void handleSend();
                 }
               }}
             />
-            <Button onClick={sendMessage} disabled={!text.trim() || !activeThread}>
+            <Button onClick={() => void handleSend()} disabled={!text.trim() || !activeThread}>
               <SendHorizontal className="h-4 w-4" />
             </Button>
           </div>

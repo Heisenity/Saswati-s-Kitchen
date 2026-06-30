@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { AdminApiAuthError, requireStrictAdminApiSession } from "@/lib/auth";
 import { OrderStatus, PaymentStatus } from "@/lib/db-types";
+import { notifyOrderStatusChange } from "@/lib/chat-service";
 import { isDatabaseConfigured } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { logAdminAction, rejectJson, requireTrustedOrigin } from "@/lib/security";
@@ -62,6 +63,15 @@ export async function PATCH(
       targetId: order.id,
       metadata: { orderStatus: order.orderStatus, paymentStatus: order.paymentStatus }
     });
+
+    await Promise.allSettled([
+      notifyOrderStatusChange({
+        orderNumber: order.orderNumber,
+        customerName: order.customerName,
+        phone: order.phone,
+        orderStatus: order.orderStatus
+      })
+    ]);
 
     return NextResponse.json({ ok: true, order });
   } catch (error) {
