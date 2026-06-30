@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { env } from "@/lib/env";
+import { formatPaymentProofAnalysis, type PaymentProofAnalysis } from "@/lib/payment-proof";
 
 type OrderLike = {
   orderNumber: string;
@@ -82,10 +83,17 @@ export async function sendNewOrderNotification(order: OrderLike) {
   ]);
 }
 
-export async function sendPaymentProofNotification(order: OrderLike) {
+export async function sendPaymentProofNotification(
+  order: OrderLike,
+  analysis?: PaymentProofAnalysis
+) {
   const message = [
     "Payment proof uploaded",
     `Order ID: ${order.orderNumber}`,
+    `Name: ${order.customerName}`,
+    `Phone: ${order.phone}`,
+    `Address: ${order.address}`,
+    `Proof check: ${formatPaymentProofAnalysis(analysis)}`,
     `Screenshot: ${order.paymentScreenshotUrl ?? "Not submitted"}`
   ].join("\n");
 

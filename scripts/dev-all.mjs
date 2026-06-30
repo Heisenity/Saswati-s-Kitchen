@@ -1,4 +1,3 @@
-import { rm } from "node:fs/promises";
 import { spawn, execSync } from "node:child_process";
 import process from "node:process";
 
@@ -31,7 +30,6 @@ function shutdown(code = 0) {
 async function main() {
   killPort(4000);
   killPort(4001);
-  await rm(".next", { recursive: true, force: true });
 
   const web = spawn("npx", ["next", "dev", "-p", "4001"], {
     stdio: "inherit",

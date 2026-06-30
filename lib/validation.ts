@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paymentProofAnalysisSchema } from "@/lib/payment-proof";
 
 export const orderSchema = z.object({
   checkoutToken: z.string().min(10),
@@ -10,6 +11,7 @@ export const orderSchema = z.object({
   longitude: z.number().optional(),
   slotType: z.enum(["LUNCH", "DINNER"]),
   paymentScreenshotUrl: z.string().url().optional(),
+  paymentProofAnalysis: paymentProofAnalysisSchema.optional(),
   items: z
     .array(
       z.object({
@@ -27,6 +29,11 @@ export const orderLookupSchema = z.object({
   phone: z.string().min(10)
 });
 
+export const geocodeSchema = z.object({
+  address: z.string().min(5),
+  landmark: z.string().optional()
+});
+
 export const menuItemSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(2),
@@ -41,6 +48,12 @@ export const menuItemSchema = z.object({
   components: z.array(z.string().min(1)).min(1)
 });
 
+export const bulkMenuComponentSchema = z.object({
+  menuItemIds: z.array(z.string().min(1)).min(1),
+  action: z.enum(["add_component", "remove_component"]),
+  component: z.string().min(2)
+});
+
 export const settingSchema = z.object({
   kitchenLatitude: z.number(),
   kitchenLongitude: z.number(),
@@ -53,4 +66,15 @@ export const settingSchema = z.object({
   lowOrderDeliveryCharge: z.number().int().min(0),
   upiId: z.string().min(3),
   qrImageUrl: z.string().min(1)
+});
+
+export const orderStatusUpdateSchema = z.object({
+  orderStatus: z.enum([
+    "PAYMENT_PENDING_VERIFICATION",
+    "CONFIRMED",
+    "REJECTED",
+    "PREPARING",
+    "OUT_FOR_DELIVERY",
+    "DELIVERED"
+  ])
 });

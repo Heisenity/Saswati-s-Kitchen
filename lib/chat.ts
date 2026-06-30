@@ -1,3 +1,11 @@
+const chatAttachmentPrefix = "__ATTACHMENT__:";
+
+export type ChatAttachment = {
+  url: string;
+  name: string;
+  mimeType: string;
+};
+
 export function normalizeIndianMobile(input: string) {
   const digits = input.replace(/\D/g, "");
 
@@ -36,4 +44,20 @@ export function formatChatTime(date: string | Date) {
     hour12: true,
     timeZone: "Asia/Kolkata"
   }).format(new Date(date));
+}
+
+export function serializeChatAttachment(attachment: ChatAttachment) {
+  return `${chatAttachmentPrefix}${JSON.stringify(attachment)}`;
+}
+
+export function parseChatAttachment(message: string) {
+  if (!message.startsWith(chatAttachmentPrefix)) return null;
+
+  try {
+    const parsed = JSON.parse(message.slice(chatAttachmentPrefix.length)) as Partial<ChatAttachment>;
+    if (!parsed.url || !parsed.name || !parsed.mimeType) return null;
+    return parsed as ChatAttachment;
+  } catch {
+    return null;
+  }
 }

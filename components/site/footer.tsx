@@ -11,7 +11,12 @@ export function Footer() {
           </p>
           <p className="mt-4 text-xs text-stone-500">
             Powered and maintained by{" "}
-            <a href="https://www.insightsnode.com" target="_blank" rel="noreferrer" className="font-semibold text-foreground">
+            <a
+              href="https://www.insightsnode.com"
+              target="_blank"
+              rel="noreferrer"
+              className="insights-link font-semibold text-foreground"
+            >
               InsightsNode
             </a>
             .
@@ -23,7 +28,7 @@ export function Footer() {
             <Link href="#menu">Today’s Menu</Link>
             <Link href="#delivery">Delivery Rules</Link>
             <Link href="#timing">Slot Timing</Link>
-            <Link href="#support">Support</Link>
+            <a href="#support" data-open-chat="true">Support</a>
           </div>
         </div>
         <div>

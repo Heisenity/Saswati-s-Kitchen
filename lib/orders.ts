@@ -1,9 +1,10 @@
 import { randomUUID } from "crypto";
-import { PaymentStatus, type SlotType } from "@prisma/client";
+import { PaymentStatus, type SlotType } from "@/lib/db-types";
 import { geocodeAddress } from "@/lib/geocode";
-import { isPrismaConnectionError, prisma } from "@/lib/prisma";
+import { isPrismaConnectionError, isPrismaSchemaMismatchError, prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { MAX_DELIVERY_DISTANCE_KM, calculateDeliveryCharge, haversineDistanceKm } from "@/lib/delivery";
+import type { PaymentProofAnalysis } from "@/lib/payment-proof";
 import { assertSlotAvailable } from "@/lib/slot";
 import { sendNewOrderNotification, sendPaymentProofNotification } from "@/lib/notifications";
 import { isDatabaseConfigured } from "@/lib/env";
@@ -28,6 +29,7 @@ export type CreateOrderInput = {
   slotType: SlotType;
   items: CheckoutItemInput[];
   paymentScreenshotUrl?: string;
+  paymentProofAnalysis?: PaymentProofAnalysis;
 };
 
 export function buildOrderNumber() {
@@ -81,50 +83,74 @@ export async function createOrder(input: CreateOrderInput) {
 
   const deliveryCharge = calculateDeliveryCharge({
     subtotal,
-    distanceKm
+    distanceKm,
+    freeDeliveryOneKmMin: settings.freeDeliveryOneKmMin,
+    freeDeliveryTwoKmMin: settings.freeDeliveryTwoKmMin,
+    aboveTwoKmDeliveryCharge: settings.aboveTwoKmDeliveryCharge,
+    lowOrderDeliveryCharge: settings.lowOrderDeliveryCharge
   });
   const totalAmount = subtotal + deliveryCharge;
   const advanceAmount = getAdvanceAmount(totalAmount);
   const balanceAmount = totalAmount - advanceAmount;
   const orderNumber = buildOrderNumber();
 
-  const order = await prisma.order.create({
-    data: {
-      orderNumber,
-      checkoutToken: input.checkoutToken || randomUUID(),
-      userId: input.userId,
-      customerName: input.customerName,
-      phone: normalizedPhone,
-      address: input.address,
-      landmark: input.landmark,
-      latitude: customerCoordinates.latitude,
-      longitude: customerCoordinates.longitude,
-      distanceKm,
-      slotType: input.slotType,
-      subtotal,
-      deliveryCharge,
-      totalAmount,
-      advanceAmount,
-      balanceAmount,
-      paymentStatus: PaymentStatus.PENDING_VERIFICATION,
-      paymentScreenshotUrl: input.paymentScreenshotUrl,
-      items: {
-        create: input.items.map((item) => ({
-          menuItemId: item.menuItemId,
-          itemName: item.itemName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.quantity * item.unitPrice
-        }))
-      }
-    },
-    include: {
-      items: true
+  const orderData = {
+    orderNumber,
+    checkoutToken: input.checkoutToken || randomUUID(),
+    userId: input.userId,
+    customerName: input.customerName,
+    phone: normalizedPhone,
+    address: input.address,
+    landmark: input.landmark,
+    latitude: customerCoordinates.latitude,
+    longitude: customerCoordinates.longitude,
+    distanceKm,
+    slotType: input.slotType,
+    subtotal,
+    deliveryCharge,
+    totalAmount,
+    advanceAmount,
+    balanceAmount,
+    paymentStatus: PaymentStatus.PENDING_VERIFICATION,
+    paymentScreenshotUrl: input.paymentScreenshotUrl,
+    items: {
+      create: input.items.map((item) => ({
+        menuItemId: item.menuItemId,
+        itemName: item.itemName,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.quantity * item.unitPrice
+      }))
     }
-  });
+  };
+
+  let order;
+  try {
+    order = await prisma.order.create({
+      data: orderData,
+      include: {
+        items: true
+      }
+    });
+  } catch (error) {
+    if (input.userId && isPrismaSchemaMismatchError(error)) {
+      // ponytail: old DBs may still miss Order.userId; retry without account-linking until migration is applied
+      const { userId: _userId, ...legacyOrderData } = orderData;
+      order = await prisma.order.create({
+        data: legacyOrderData,
+        include: {
+          items: true
+        }
+      });
+    } else {
+      throw error;
+    }
+  }
 
   await sendNewOrderNotification(order);
-  if (input.paymentScreenshotUrl) await sendPaymentProofNotification(order);
+  if (input.paymentScreenshotUrl) {
+    await sendPaymentProofNotification(order, input.paymentProofAnalysis);
+  }
   return order;
 }
 
@@ -139,7 +165,7 @@ export async function getOrdersForUser(userId: string) {
       take: 12
     });
   } catch (error) {
-    if (isPrismaConnectionError(error)) return [];
+    if (isPrismaConnectionError(error) || isPrismaSchemaMismatchError(error)) return [];
     throw error;
   }
 }

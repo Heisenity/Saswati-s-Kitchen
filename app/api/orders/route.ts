@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
 import { createOrder } from "@/lib/orders";
 import { isPrismaConnectionError } from "@/lib/prisma";
+import { applyRateLimit, rejectJson, requireTrustedOrigin } from "@/lib/security";
 import { createClient } from "@/lib/supabase/server";
 import { orderSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
+  const rateLimit = applyRateLimit(request, {
+    key: "orders-create",
+    limit: 10,
+    windowMs: 60_000
+  });
+  if (rateLimit) return rateLimit;
+
+  const originError = requireTrustedOrigin(request);
+  if (originError) return originError;
+
   try {
     const payload = orderSchema.parse(await request.json());
     const supabase = await createClient();
@@ -13,10 +24,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json(
-        { ok: false, error: "Please sign in to place your order." },
-        { status: 401 }
-      );
+      return rejectJson(401, "Unauthorized");
     }
 
     const order = await createOrder({
@@ -30,16 +38,9 @@ export async function POST(request: Request) {
       order
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: isPrismaConnectionError(error)
-          ? "Ordering is temporarily unavailable. Please try again in a few minutes."
-          : error instanceof Error
-            ? error.message
-            : "Could not place order."
-      },
-      { status: 400 }
-    );
+    if (isPrismaConnectionError(error)) {
+      return rejectJson(400, "Ordering is temporarily unavailable. Please try again shortly.");
+    }
+    return rejectJson(400, "Invalid request");
   }
 }

@@ -55,3 +55,33 @@ body {
     transform: rotate(-8deg);
   }
 }
+
+@keyframes insights-underline {
+  0%, 100% {
+    background-position: 0% 50%;
+    box-shadow: 0 0 0.35rem rgba(240, 195, 107, 0.16);
+  }
+  50% {
+    background-position: 100% 50%;
+    box-shadow: 0 0 0.6rem rgba(240, 195, 107, 0.26);
+  }
+}
+
+.insights-link {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 0.18rem;
+}
+
+.insights-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0.18rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6b3f12 0%, #f0c36b 50%, #6b3f12 100%);
+  background-size: 220% 100%;
+  animation: insights-underline 3.8s ease-in-out infinite;
+}

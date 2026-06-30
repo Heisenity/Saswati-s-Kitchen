@@ -1,13 +1,13 @@
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Card } from "@/components/ui/card";
-import { requireAdminSession } from "@/lib/auth";
+import { requireStrictAdminSession } from "@/lib/auth";
 import { getAdminDashboardData } from "@/lib/admin";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  await requireAdminSession();
+  await requireStrictAdminSession();
   const data = await getAdminDashboardData();
 
   return (

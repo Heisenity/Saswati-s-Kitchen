@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { isWhitelistedAdminEmail, isDatabaseConfigured } from "@/lib/env";
+import { isPrismaConnectionError, prisma } from "@/lib/prisma";
+import { logDeniedAdminLogin } from "@/lib/security";
 import { createClient } from "@/lib/supabase/server";
-import { getSessionContext } from "@/lib/auth";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -21,10 +23,54 @@ export async function GET(request: Request) {
   }
 
   if (mode === "admin") {
-    const { profile } = await getSessionContext();
-    if (profile?.role !== "ADMIN") {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (!user?.email || !user.email_confirmed_at || !isWhitelistedAdminEmail(user.email)) {
+      await logDeniedAdminLogin(request, user?.email);
       await supabase.auth.signOut();
       return NextResponse.redirect(new URL("/admin/login?error=admin_required", url.origin));
+    }
+
+    if (isDatabaseConfigured()) {
+      try {
+        await prisma.profile.upsert({
+          where: { id: user.id },
+          update: {
+            email: user.email,
+            fullName:
+              typeof user.user_metadata?.full_name === "string"
+                ? user.user_metadata.full_name
+                : null,
+            avatarUrl:
+              typeof user.user_metadata?.avatar_url === "string"
+                ? user.user_metadata.avatar_url
+                : null,
+            role: "ADMIN"
+          },
+          create: {
+            id: user.id,
+            email: user.email,
+            fullName:
+              typeof user.user_metadata?.full_name === "string"
+                ? user.user_metadata.full_name
+                : null,
+            avatarUrl:
+              typeof user.user_metadata?.avatar_url === "string"
+                ? user.user_metadata.avatar_url
+                : null,
+            role: "ADMIN"
+          }
+        });
+      } catch (profileError) {
+        if (isPrismaConnectionError(profileError)) {
+          await supabase.auth.signOut();
+          return NextResponse.redirect(new URL("/admin/login?error=oauth_callback_failed", url.origin));
+        }
+
+        throw profileError;
+      }
     }
   }
 

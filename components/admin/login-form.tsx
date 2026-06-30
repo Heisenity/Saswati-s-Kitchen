@@ -5,7 +5,7 @@ export function AdminLoginForm({ error }: { error?: string }) {
     <OAuthLoginCard
       eyebrow="Protected access"
       title="Admin login"
-      description="Use Google sign in to continue."
+      description="Use an approved Google account to continue."
       next="/admin/dashboard"
       mode="admin"
       error={error}

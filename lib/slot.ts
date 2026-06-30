@@ -1,4 +1,4 @@
-import type { SlotType } from "@prisma/client";
+import type { SlotType } from "@/lib/db-types";
 
 type SlotState =
   | { lunch: "OPEN" | "CLOSED"; dinner: "NOT_OPEN" | "OPEN" | "CLOSED"; activeSlot: SlotType | null; label: string }

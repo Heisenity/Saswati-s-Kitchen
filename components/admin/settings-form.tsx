@@ -20,6 +20,26 @@ type SettingsShape = {
   qrImageUrl: string;
 };
 
+function Field({
+  label,
+  hint,
+  children,
+  className = ""
+}: {
+  label: string;
+  hint: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <label className="text-sm font-semibold text-stone-700">{label}</label>
+      <p className="mt-1 text-xs leading-5 text-stone-500">{hint}</p>
+      <div className="mt-2">{children}</div>
+    </div>
+  );
+}
+
 export function SettingsForm({ initialSettings }: { initialSettings: SettingsShape }) {
   const [form, setForm] = useState({
     ...initialSettings,
@@ -61,18 +81,47 @@ export function SettingsForm({ initialSettings }: { initialSettings: SettingsSha
       <p className="mt-3 text-sm text-stone-600">
         Delivery origin address: {defaultKitchenAddress}
       </p>
+      <p className="mt-2 text-xs leading-5 text-stone-500">
+        Each field below controls either the delivery origin, slot timing, free-delivery thresholds, or the payment setup shown to customers.
+      </p>
       <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={submitForm}>
-        <Input placeholder="Kitchen latitude" value={form.kitchenLatitude} onChange={(event) => setForm({ ...form, kitchenLatitude: event.target.value })} />
-        <Input placeholder="Kitchen longitude" value={form.kitchenLongitude} onChange={(event) => setForm({ ...form, kitchenLongitude: event.target.value })} />
-        <Input placeholder="Lunch close time" value={form.lunchCloseTime} onChange={(event) => setForm({ ...form, lunchCloseTime: event.target.value })} />
-        <Input placeholder="Dinner open time" value={form.dinnerOpenTime} onChange={(event) => setForm({ ...form, dinnerOpenTime: event.target.value })} />
-        <Input placeholder="Dinner close time" value={form.dinnerCloseTime} onChange={(event) => setForm({ ...form, dinnerCloseTime: event.target.value })} />
-        <Input placeholder="UPI ID" value={form.upiId} onChange={(event) => setForm({ ...form, upiId: event.target.value })} />
-        <Input placeholder="Free delivery up to 1 km" value={form.freeDeliveryOneKmMin} onChange={(event) => setForm({ ...form, freeDeliveryOneKmMin: event.target.value })} />
-        <Input placeholder="Free delivery above 1 km" value={form.freeDeliveryTwoKmMin} onChange={(event) => setForm({ ...form, freeDeliveryTwoKmMin: event.target.value })} />
-        <Input placeholder="Charge above 2 km" value={form.aboveTwoKmDeliveryCharge} onChange={(event) => setForm({ ...form, aboveTwoKmDeliveryCharge: event.target.value })} />
-        <Input placeholder="Low order delivery charge" value={form.lowOrderDeliveryCharge} onChange={(event) => setForm({ ...form, lowOrderDeliveryCharge: event.target.value })} />
-        <Input className="md:col-span-2" placeholder="QR image URL" value={form.qrImageUrl} onChange={(event) => setForm({ ...form, qrImageUrl: event.target.value })} />
+        <Field label="Kitchen latitude" hint="Used as the fixed starting point for every delivery distance check.">
+          <Input type="number" step="0.000001" value={form.kitchenLatitude} onChange={(event) => setForm({ ...form, kitchenLatitude: event.target.value })} />
+        </Field>
+        <Field label="Kitchen longitude" hint="Keep this matched with the Barrackpore kitchen location.">
+          <Input type="number" step="0.000001" value={form.kitchenLongitude} onChange={(event) => setForm({ ...form, kitchenLongitude: event.target.value })} />
+        </Field>
+        <Field label="Lunch close time" hint="After this IST time, same-day lunch checkout closes automatically.">
+          <Input type="time" value={form.lunchCloseTime} onChange={(event) => setForm({ ...form, lunchCloseTime: event.target.value })} />
+        </Field>
+        <Field label="Dinner open time" hint="Dinner ordering starts from this IST time.">
+          <Input type="time" value={form.dinnerOpenTime} onChange={(event) => setForm({ ...form, dinnerOpenTime: event.target.value })} />
+        </Field>
+        <Field label="Dinner close time" hint="Dinner ordering stops after this IST time.">
+          <Input type="time" value={form.dinnerCloseTime} onChange={(event) => setForm({ ...form, dinnerCloseTime: event.target.value })} />
+        </Field>
+        <Field label="UPI ID" hint="Shown during checkout along with the payment QR code.">
+          <Input value={form.upiId} onChange={(event) => setForm({ ...form, upiId: event.target.value })} />
+        </Field>
+        <Field label="Free delivery minimum up to 1 km" hint="Customers within 1 km unlock free delivery from this cart value.">
+          <Input type="number" min="0" value={form.freeDeliveryOneKmMin} onChange={(event) => setForm({ ...form, freeDeliveryOneKmMin: event.target.value })} />
+        </Field>
+        <Field label="Free delivery minimum above 1 km" hint="Customers above 1 km and up to 2 km unlock free delivery from this value.">
+          <Input type="number" min="0" value={form.freeDeliveryTwoKmMin} onChange={(event) => setForm({ ...form, freeDeliveryTwoKmMin: event.target.value })} />
+        </Field>
+        <Field label="Delivery charge above 2 km" hint="Applied when an order does not qualify for free delivery in the extended zone.">
+          <Input type="number" min="0" value={form.aboveTwoKmDeliveryCharge} onChange={(event) => setForm({ ...form, aboveTwoKmDeliveryCharge: event.target.value })} />
+        </Field>
+        <Field label="Base low-order delivery charge" hint="Used for nearby low-value orders that do not unlock free delivery.">
+          <Input type="number" min="0" value={form.lowOrderDeliveryCharge} onChange={(event) => setForm({ ...form, lowOrderDeliveryCharge: event.target.value })} />
+        </Field>
+        <Field
+          className="md:col-span-2"
+          label="QR image URL"
+          hint="This image is shown on checkout for manual UPI payment scanning."
+        >
+          <Input value={form.qrImageUrl} onChange={(event) => setForm({ ...form, qrImageUrl: event.target.value })} />
+        </Field>
         <div className="md:col-span-2">
           <Button>Save settings</Button>
         </div>

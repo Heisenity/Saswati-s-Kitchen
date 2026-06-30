@@ -6,7 +6,7 @@ Production-ready MVP for a Bengali homemade food delivery service in Barrackpore
 
 - Next.js App Router + TypeScript
 - Tailwind CSS with shadcn-style UI primitives
-- Prisma ORM for Supabase Postgres
+- Raw PostgreSQL queries over Supabase Postgres
 - Supabase Auth with Google + Facebook OAuth for user and admin login
 - Doppler for environment management
 - Cloudflare R2 for payment proof storage
@@ -41,8 +41,8 @@ components/
   receipt/                 Receipt actions
   site/                    Homepage sections
   ui/                      Reusable shadcn-style primitives
-lib/                       Business rules, auth, Prisma, notifications, storage
-prisma/                    Prisma schema and seed
+lib/                       Business rules, auth, db adapter, notifications, storage
+sql/                       Copy-paste Supabase schema and seed SQL
 public/brand/              SVG brand assets and placeholders
 render.yaml                Render service definitions
 ```
@@ -97,7 +97,6 @@ You can use `.env.example` as a value checklist, but the runtime scripts are wir
 
 ```bash
 npm install
-npm run prisma:generate:raw
 npm run dev:all
 ```
 

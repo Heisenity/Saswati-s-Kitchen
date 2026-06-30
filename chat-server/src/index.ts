@@ -3,8 +3,8 @@ import compression from "compression";
 import cors from "cors";
 import express from "express";
 import { Server } from "socket.io";
-import { prisma } from "../../lib/prisma";
-import { isDatabaseConfigured } from "../../lib/env";
+import { isPrismaConnectionError, prisma } from "../../lib/prisma";
+import { isDatabaseConfigured, isWhitelistedAdminEmail } from "../../lib/env";
 import { sendOfflineChatNotification } from "../../lib/notifications";
 import { publicEnv } from "../../lib/public-env";
 import { isLikelyHumanName, isValidIndianMobile, normalizeIndianMobile, sanitizeHumanName } from "../../lib/chat";
@@ -28,6 +28,7 @@ const io = new Server(server, {
 });
 
 const adminRoom = "admins";
+const chatHistoryLimit = 200;
 
 function toMessagePayload(
   message: {
@@ -51,34 +52,43 @@ function toMessagePayload(
 async function setAdminPresence(adminId: string, onlineStatus: boolean) {
   if (!isDatabaseConfigured()) return;
 
-  await prisma.adminPresence.upsert({
-    where: { adminId },
-    update: { onlineStatus, lastSeenAt: new Date() },
-    create: { adminId, onlineStatus, lastSeenAt: new Date() }
-  });
+  try {
+    await prisma.adminPresence.upsert({
+      where: { adminId },
+      update: { onlineStatus, lastSeenAt: new Date() },
+      create: { adminId, onlineStatus, lastSeenAt: new Date() }
+    });
+  } catch (error) {
+    if (!isPrismaConnectionError(error)) throw error;
+  }
 }
 
 async function getThreads() {
   if (!isDatabaseConfigured()) return [];
 
-  const threads = await prisma.chat.findMany({
-    orderBy: { updatedAt: "desc" },
-    include: {
-      messages: {
-        orderBy: { createdAt: "asc" },
-        take: 30
+  try {
+    const threads = await prisma.chat.findMany({
+      orderBy: { updatedAt: "desc" },
+      include: {
+        messages: {
+          orderBy: { createdAt: "asc" },
+          take: chatHistoryLimit
+        }
       }
-    }
-  });
+    });
 
-  return threads.map((thread) => ({
-    id: thread.id,
-    customerName: thread.customerName,
-    phone: thread.phone,
-    orderId: thread.orderId,
-    unreadCount: thread.messages.filter((message) => !message.seen && message.senderType === "CUSTOMER").length,
-    messages: thread.messages.map((message) => toMessagePayload(message, thread.customerName))
-  }));
+    return threads.map((thread: any) => ({
+      id: thread.id,
+      customerName: thread.customerName,
+      phone: thread.phone,
+      orderId: thread.orderId,
+      unreadCount: thread.messages.filter((message: any) => !message.seen && message.senderType === "CUSTOMER").length,
+      messages: thread.messages.map((message: any) => toMessagePayload(message, thread.customerName))
+    }));
+  } catch (error) {
+    if (isPrismaConnectionError(error)) return [];
+    throw error;
+  }
 }
 
 async function broadcastThreads() {
@@ -87,7 +97,7 @@ async function broadcastThreads() {
 }
 
 async function getAdminUser(accessToken: string) {
-  if (!publicEnv.supabasePublishableKey) return null;
+  if (!publicEnv.supabasePublishableKey || !isDatabaseConfigured()) return null;
 
   const response = await fetch(`${publicEnv.supabaseUrl}/auth/v1/user`, {
     headers: {
@@ -98,15 +108,28 @@ async function getAdminUser(accessToken: string) {
 
   if (!response.ok) return null;
 
-  const user = (await response.json()) as { id: string };
-  if (!isDatabaseConfigured()) return user;
+  const user = (await response.json()) as {
+    id: string;
+    email?: string | null;
+    email_confirmed_at?: string | null;
+  };
 
-  const profile = await prisma.profile.findUnique({
-    where: { id: user.id },
-    select: { role: true }
-  });
+  const email = user.email?.trim().toLowerCase() ?? null;
+  if (!email || !user.email_confirmed_at || !isWhitelistedAdminEmail(email)) {
+    return null;
+  }
 
-  if (profile?.role !== "ADMIN") return null;
+  let profile = null;
+  try {
+    profile = await prisma.profile.findUnique({
+      where: { id: user.id },
+      select: { role: true, email: true }
+    });
+  } catch (error) {
+    if (!isPrismaConnectionError(error)) throw error;
+  }
+
+  if (profile?.role !== "ADMIN" || profile.email?.trim().toLowerCase() !== email) return null;
   return user;
 }
 
@@ -130,38 +153,48 @@ async function findOrCreateCustomerChat(input: {
     };
   }
 
-  const order = input.orderNumber
-    ? await prisma.order.findUnique({ where: { orderNumber: input.orderNumber } })
-    : null;
+  try {
+    const order = input.orderNumber
+      ? await prisma.order.findUnique({ where: { orderNumber: input.orderNumber } })
+      : null;
 
-  const existing = await prisma.chat.findFirst({
-    where: {
-      phone: input.phone,
-      orderId: order?.id ?? null
-    },
-    include: {
-      messages: {
-        orderBy: { createdAt: "asc" },
-        take: 30
+    const existing = await prisma.chat.findFirst({
+      where: {
+        phone: input.phone,
+        orderId: order?.id ?? null
+      },
+      include: {
+        messages: {
+          orderBy: { createdAt: "asc" }
+        }
       }
-    }
-  });
+    });
 
-  if (existing) return existing;
+    if (existing) return existing;
 
-  return prisma.chat.create({
-    data: {
+    return await prisma.chat.create({
+      data: {
+        customerName: input.customerName,
+        phone: input.phone,
+        orderId: order?.id
+      },
+      include: {
+        messages: {
+          orderBy: { createdAt: "asc" }
+        }
+      }
+    });
+  } catch (error) {
+    if (!isPrismaConnectionError(error)) throw error;
+
+    return {
+      id: `ephemeral-${input.phone}`,
       customerName: input.customerName,
       phone: input.phone,
-      orderId: order?.id
-    },
-    include: {
-      messages: {
-        orderBy: { createdAt: "asc" },
-        take: 30
-      }
-    }
-  });
+      orderId: null,
+      messages: []
+    };
+  }
 }
 
 io.on("connection", async (socket) => {
@@ -193,26 +226,37 @@ io.on("connection", async (socket) => {
     socket.on("admin:open-thread", async ({ chatId }: { chatId: string }) => {
       if (!isDatabaseConfigured()) return;
 
-      await prisma.chatMessage.updateMany({
-        where: {
-          chatId,
-          senderType: "CUSTOMER",
-          seen: false
-        },
-        data: { seen: true }
-      });
+      try {
+        await prisma.chatMessage.updateMany({
+          where: {
+            chatId,
+            senderType: "CUSTOMER",
+            seen: false
+          },
+          data: { seen: true }
+        });
 
-      const thread = await prisma.chat.findUnique({
-        where: { id: chatId },
-        include: {
-          messages: {
-            orderBy: { createdAt: "asc" },
-            take: 50
+        const thread = await prisma.chat.findUnique({
+          where: { id: chatId },
+          include: {
+            messages: {
+              orderBy: { createdAt: "asc" }
+            }
           }
-        }
-      });
+        });
 
-      if (thread) socket.emit("admin:thread", thread);
+        if (thread) {
+          socket.emit("admin:thread", {
+            id: thread.id,
+            customerName: thread.customerName,
+            phone: thread.phone,
+            orderId: thread.orderId,
+            messages: thread.messages.map((message: any) => toMessagePayload(message, thread.customerName))
+          });
+        }
+      } catch (error) {
+        if (!isPrismaConnectionError(error)) throw error;
+      }
       await broadcastThreads();
     });
   }
@@ -238,7 +282,7 @@ io.on("connection", async (socket) => {
     socket.join(`chat:${chat.id}`);
     socket.emit(
       "chat:history",
-      (chat.messages ?? []).map((message) => toMessagePayload(message, chat.customerName))
+      (chat.messages ?? []).map((message: any) => toMessagePayload(message, chat.customerName))
     );
     socket.emit("admin:status", (io.sockets.adapter.rooms.get(adminRoom)?.size ?? 0) > 0);
   }
@@ -261,37 +305,52 @@ io.on("connection", async (socket) => {
     const chatId = isAdmin ? payload.chatId : socket.data.chatId;
     if (!chatId) return;
 
-    const message = isDatabaseConfigured()
-      ? await prisma.chatMessage.create({
+    let message =
+      {
+        id: crypto.randomUUID(),
+        chatId,
+        message: payload.message.trim(),
+        senderType: (isAdmin ? "ADMIN" : "CUSTOMER") as "ADMIN" | "CUSTOMER",
+        seen: isAdmin,
+        createdAt: new Date()
+      };
+
+    if (isDatabaseConfigured()) {
+      try {
+        message = await prisma.chatMessage.create({
           data: {
             chatId,
             message: payload.message.trim(),
             senderType: isAdmin ? "ADMIN" : "CUSTOMER",
             seen: isAdmin
           }
-        })
-      : {
-          id: crypto.randomUUID(),
-          chatId,
-          message: payload.message.trim(),
-          senderType: (isAdmin ? "ADMIN" : "CUSTOMER") as "ADMIN" | "CUSTOMER",
-          seen: isAdmin,
-          createdAt: new Date()
-        };
+        });
+      } catch (error) {
+        if (!isPrismaConnectionError(error)) throw error;
+      }
+    }
 
-    const customerName =
-      auth.role === "admin"
-        ? (isDatabaseConfigured()
-            ? (await prisma.chat.findUnique({ where: { id: chatId }, select: { customerName: true } }))?.customerName
-            : "Customer") ?? "Customer"
-        : socket.data.customerName ?? "Customer";
+    let customerName = socket.data.customerName ?? "Customer";
+    if (auth.role === "admin" && isDatabaseConfigured()) {
+      try {
+        customerName =
+          (await prisma.chat.findUnique({ where: { id: chatId }, select: { customerName: true } }))?.customerName ??
+          "Customer";
+      } catch (error) {
+        if (!isPrismaConnectionError(error)) throw error;
+      }
+    }
     const messagePayload = toMessagePayload(message, customerName, payload.clientId);
 
     if (isDatabaseConfigured()) {
-      await prisma.chat.update({
-        where: { id: chatId },
-        data: { updatedAt: new Date() }
-      });
+      try {
+        await prisma.chat.update({
+          where: { id: chatId },
+          data: { updatedAt: new Date() }
+        });
+      } catch (error) {
+        if (!isPrismaConnectionError(error)) throw error;
+      }
     }
 
     io.to(`chat:${chatId}`).emit("chat:typing", { typing: false, senderType: isAdmin ? "ADMIN" : "CUSTOMER" });
@@ -301,12 +360,17 @@ io.on("connection", async (socket) => {
     await broadcastThreads();
 
     if (!isAdmin && io.sockets.adapter.rooms.get(adminRoom)?.size !== undefined && (io.sockets.adapter.rooms.get(adminRoom)?.size ?? 0) === 0) {
-      const thread = isDatabaseConfigured()
-        ? await prisma.chat.findUnique({
+      let thread = null;
+      if (isDatabaseConfigured()) {
+        try {
+          thread = await prisma.chat.findUnique({
             where: { id: chatId },
             include: { order: true }
-          })
-        : null;
+          });
+        } catch (error) {
+          if (!isPrismaConnectionError(error)) throw error;
+        }
+      }
 
       await sendOfflineChatNotification({
         customerName: socket.data.customerName ?? "Customer",

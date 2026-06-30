@@ -27,7 +27,19 @@ export async function getMenuItems() {
     return await prisma.menuItem.findMany({
       where: { isActive: true },
       orderBy: [{ price: "desc" }],
-      include: { components: true }
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        price: true,
+        badge: true,
+        imageUrl: true,
+        components: {
+          select: {
+            itemName: true
+          }
+        }
+      }
     });
   } catch (error) {
     if (isPrismaConnectionError(error)) return getFallbackMenuItems();
@@ -36,7 +48,7 @@ export async function getMenuItems() {
 }
 
 export async function getAdminMenuItems() {
-  if (!isDatabaseConfigured()) return getMenuItems();
+  if (!isDatabaseConfigured()) return getFallbackMenuItems();
 
   try {
     return await prisma.menuItem.findMany({

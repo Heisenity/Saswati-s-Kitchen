@@ -1,13 +1,15 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { io, type Socket } from "socket.io-client";
 import { useEffect, useRef, useState } from "react";
-import { LoaderCircle, MessageCircle, SendHorizontal } from "lucide-react";
+import { FileText, LoaderCircle, MessageCircle, SendHorizontal } from "lucide-react";
 import { publicEnv } from "@/lib/public-env";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatChatTime, isLikelyHumanName, isValidIndianMobile, normalizeIndianMobile, sanitizeHumanName } from "@/lib/chat";
+import { formatChatTime, isLikelyHumanName, isValidIndianMobile, normalizeIndianMobile, parseChatAttachment, sanitizeHumanName, type ChatAttachment } from "@/lib/chat";
 import { cn } from "@/lib/utils";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
 type Message = {
   id: string;
@@ -17,6 +19,31 @@ type Message = {
   createdAt: string;
   clientId?: string;
 };
+
+function AttachmentBubble({ attachment }: { attachment: ChatAttachment }) {
+  const isImage = attachment.mimeType.startsWith("image/");
+
+  return (
+    <a href={attachment.url} target="_blank" rel="noreferrer" className="block space-y-3">
+      {isImage ? (
+        <img
+          src={attachment.url}
+          alt={attachment.name}
+          className="max-h-48 w-full rounded-2xl object-cover"
+        />
+      ) : (
+        <div className="flex items-center gap-3 rounded-2xl bg-black/5 px-3 py-3 text-left text-current">
+          <FileText className="h-5 w-5 shrink-0" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">{attachment.name}</p>
+            <p className="text-xs opacity-80">Open PDF</p>
+          </div>
+        </div>
+      )}
+      <p className="text-xs font-medium underline underline-offset-4">Open attachment</p>
+    </a>
+  );
+}
 
 export function ChatWidget() {
   const [open, setOpen] = useState(false);
@@ -41,8 +68,19 @@ export function ChatWidget() {
       setOpen(true);
     }
 
+    function handleDocumentClick(event: MouseEvent) {
+      if (!(event.target instanceof Element)) return;
+      if (event.target.closest("[data-open-chat='true']")) {
+        setOpen(true);
+      }
+    }
+
     window.addEventListener("saswatis:open-chat", handleOpenChat);
-    return () => window.removeEventListener("saswatis:open-chat", handleOpenChat);
+    document.addEventListener("click", handleDocumentClick);
+    return () => {
+      window.removeEventListener("saswatis:open-chat", handleOpenChat);
+      document.removeEventListener("click", handleDocumentClick);
+    };
   }, []);
 
   useEffect(() => {
@@ -159,8 +197,10 @@ export function ChatWidget() {
     setText("");
   }
 
+  const whatsappUrl = buildWhatsAppUrl("Hi Saswati’s Kitchen, I want to know today’s menu and delivery availability.");
+
   return (
-    <div className="fixed bottom-5 right-5 z-40">
+    <div className="fixed bottom-5 right-4 z-[80] flex flex-col items-end gap-3 sm:bottom-6 sm:right-6 sm:gap-4">
       {open ? (
         <div className="w-[min(360px,calc(100vw-2rem))] rounded-[28px] border border-border bg-card p-4 shadow-2xl">
           <div className="flex items-center justify-between">
@@ -204,31 +244,35 @@ export function ChatWidget() {
             <>
               {connectionError ? <p className="mt-4 text-xs text-primary">{connectionError}</p> : null}
               <div ref={scrollRef} className="mt-4 h-80 space-y-3 overflow-y-auto rounded-3xl bg-muted p-3">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={cn(
-                      "flex w-fit max-w-[85%] flex-col",
-                      message.senderType === "CUSTOMER"
-                        ? "ml-auto text-right"
-                        : "text-left"
-                    )}
-                  >
+                {messages.map((message) => {
+                  const attachment = parseChatAttachment(message.message);
+
+                  return (
                     <div
+                      key={message.id}
                       className={cn(
-                        "rounded-2xl px-3 py-2 text-sm shadow-sm",
+                        "flex w-fit max-w-[85%] flex-col",
                         message.senderType === "CUSTOMER"
-                          ? "bg-leaf text-white"
-                          : "border border-border bg-white text-foreground"
+                          ? "ml-auto text-right"
+                          : "text-left"
                       )}
                     >
-                      {message.message}
+                      <div
+                        className={cn(
+                          "rounded-2xl px-3 py-2 text-sm shadow-sm",
+                          message.senderType === "CUSTOMER"
+                            ? "bg-leaf text-white"
+                            : "border border-border bg-white text-foreground"
+                        )}
+                      >
+                        {attachment ? <AttachmentBubble attachment={attachment} /> : message.message}
+                      </div>
+                      <div className="mt-1 px-1 text-[11px] text-stone-500">
+                        <span className="font-medium">{message.senderName}</span> · {formatChatTime(message.createdAt)}
+                      </div>
                     </div>
-                    <div className="mt-1 px-1 text-[11px] text-stone-500">
-                      <span className="font-medium">{message.senderName}</span> · {formatChatTime(message.createdAt)}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {typing ? <p className="text-xs text-stone-500">Admin is typing…</p> : null}
               </div>
               <div className="mt-3 flex gap-2">
@@ -255,8 +299,30 @@ export function ChatWidget() {
         </div>
       ) : null}
 
+      {!open ? (
+        <motion.a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Chat on WhatsApp"
+          className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] text-white shadow-[0_14px_35px_rgba(37,211,102,0.35)] transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-[0_18px_45px_rgba(37,211,102,0.45)] sm:h-16 sm:w-16"
+          animate={{ y: [0, -6, 0] }}
+          transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <span className="absolute inset-0 rounded-full bg-[#25D366]/30 opacity-40 animate-ping" />
+          <svg viewBox="0 0 32 32" className="relative z-10 h-7 w-7 fill-current sm:h-8 sm:w-8" aria-hidden="true">
+            <path d="M19.11 17.36c-.29-.14-1.69-.83-1.95-.92-.26-.09-.45-.14-.64.14-.19.28-.73.92-.89 1.11-.16.19-.32.21-.61.07-.29-.14-1.2-.44-2.28-1.41-.84-.75-1.4-1.67-1.57-1.95-.16-.28-.02-.43.12-.57.13-.13.29-.33.43-.5.14-.17.19-.28.29-.47.09-.19.05-.35-.02-.5-.07-.14-.64-1.54-.88-2.11-.23-.56-.46-.48-.64-.49h-.54c-.19 0-.5.07-.76.35-.26.28-1 1-.98 2.43.02 1.43 1.03 2.81 1.17 3 .14.19 2.02 3.09 4.89 4.33.68.29 1.21.46 1.62.59.68.22 1.3.19 1.79.12.55-.08 1.69-.69 1.93-1.36.24-.66.24-1.23.17-1.35-.07-.12-.26-.19-.55-.33Z" />
+            <path d="M27.26 4.73A15.84 15.84 0 0 0 16.01 0C7.17 0 0 7.17 0 16c0 2.82.74 5.58 2.14 8.02L0 32l8.19-2.1A15.94 15.94 0 0 0 16.01 32C24.83 32 32 24.83 32 16c0-4.27-1.66-8.28-4.74-11.27ZM16.01 29.3c-2.41 0-4.77-.65-6.83-1.88l-.49-.29-4.86 1.25 1.29-4.74-.32-.49A13.27 13.27 0 0 1 2.72 16c0-7.31 5.96-13.27 13.29-13.27 3.55 0 6.88 1.38 9.39 3.88A13.18 13.18 0 0 1 29.3 16c0 7.31-5.96 13.3-13.29 13.3Z" />
+          </svg>
+          <span className="pointer-events-none absolute right-full mr-3 hidden translate-x-2 whitespace-nowrap rounded-full border border-[#eadfd3] bg-white/95 px-4 py-2 text-sm font-semibold text-stone-800 opacity-0 shadow-sm transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100 md:block">
+            Order on WhatsApp
+          </span>
+        </motion.a>
+      ) : null}
+
       <button
-        className="ml-auto mt-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-xl"
+        type="button"
+        className="ml-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-xl sm:h-16 sm:w-16"
         onClick={() => setOpen((current) => !current)}
         aria-label="Open live chat"
       >

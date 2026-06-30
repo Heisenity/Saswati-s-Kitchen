@@ -1,33 +1,29 @@
 import { NextResponse } from "next/server";
 import { lookupOrderByPhone } from "@/lib/orders";
+import { applyRateLimit, rejectJson } from "@/lib/security";
 import { orderLookupSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
+  const rateLimit = applyRateLimit(request, {
+    key: "orders-lookup",
+    limit: 12,
+    windowMs: 60_000
+  });
+  if (rateLimit) return rateLimit;
+
   try {
     const payload = orderLookupSchema.parse(await request.json());
     const order = await lookupOrderByPhone(payload.orderNumber, payload.phone);
 
     if (!order) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "No matching order was found for this phone number and order ID."
-        },
-        { status: 404 }
-      );
+      return rejectJson(404, "No matching order was found for this phone number and order ID.");
     }
 
     return NextResponse.json({
       ok: true,
       order
     });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: error instanceof Error ? error.message : "Could not look up order."
-      },
-      { status: 400 }
-    );
+  } catch {
+    return rejectJson(400, "Invalid request");
   }
 }

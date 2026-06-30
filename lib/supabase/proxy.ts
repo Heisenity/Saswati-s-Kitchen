@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { env } from "@/lib/env";
 import { isSupabaseAuthConfigured } from "@/lib/env";
 
+const sevenDaysInSeconds = 60 * 60 * 24 * 7;
+
 export async function updateSession(request: NextRequest) {
   if (!isSupabaseAuthConfigured()) {
     return NextResponse.next({
@@ -32,7 +34,7 @@ export async function updateSession(request: NextRequest) {
           });
 
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, { ...options, maxAge: sevenDaysInSeconds })
           );
         }
       }

@@ -1,16 +1,19 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Image from "next/image";
-import { motion } from "framer-motion";
 import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/components/cart/cart-provider";
-import { CustomerAuthCard } from "@/components/auth/customer-auth-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/utils";
+
+const CustomerAuthCard = dynamic(
+  () => import("@/components/auth/customer-auth-card").then((mod) => mod.CustomerAuthCard)
+);
 
 type MenuSectionProps = {
   items: Array<{
@@ -47,7 +50,6 @@ export function MenuSection({ items }: MenuSectionProps) {
           {items.map((item, index) => (
             <MenuCard
               item={item}
-              index={index}
               key={item.id}
               onAuthRequired={(next) => {
                 setAuthNext(next);
@@ -77,15 +79,13 @@ export function MenuSection({ items }: MenuSectionProps) {
 
 function MenuCard({
   item,
-  index,
   onAuthRequired
 }: {
   item: MenuSectionProps["items"][number];
-  index: number;
   onAuthRequired: (next: string) => void;
 }) {
   const { addItem, replaceWithSingleItem } = useCart();
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(0);
 
   async function requireAuth(next: string) {
     const supabase = createClient();
@@ -99,12 +99,7 @@ function MenuCard({
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 18 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.35, delay: index * 0.04 }}
-    >
+    <div>
       <Card className="overflow-hidden p-4">
         <Image
           src={item.imageUrl}
@@ -133,11 +128,25 @@ function MenuCard({
         </ul>
         <div className="mt-5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 rounded-full border border-border bg-white p-1">
-            <button type="button" className="rounded-full px-3 py-2" onClick={() => setQuantity(Math.max(1, quantity - 1))}>
+            <button
+              type="button"
+              className="rounded-full px-3 py-2"
+              onClick={(event) => {
+                event.stopPropagation();
+                setQuantity(Math.max(0, quantity - 1));
+              }}
+            >
               -
             </button>
             <span className="min-w-8 text-center font-semibold">{quantity}</span>
-            <button type="button" className="rounded-full px-3 py-2" onClick={() => setQuantity(quantity + 1)}>
+            <button
+              type="button"
+              className="rounded-full px-3 py-2"
+              onClick={(event) => {
+                event.stopPropagation();
+                setQuantity(quantity + 1);
+              }}
+            >
               +
             </button>
           </div>
@@ -146,7 +155,9 @@ function MenuCard({
               size="sm"
               className="min-w-[118px] transition-transform duration-200 hover:-translate-y-0.5"
               variant="outline"
-              onClick={async () => {
+              disabled={quantity === 0}
+              onClick={async (event) => {
+                event.stopPropagation();
                 addItem(
                   {
                     id: item.id,
@@ -166,7 +177,9 @@ function MenuCard({
             <Button
               size="sm"
               className="min-w-[108px] transition-transform duration-200 hover:-translate-y-0.5"
-              onClick={async () => {
+              disabled={quantity === 0}
+              onClick={async (event) => {
+                event.stopPropagation();
                 replaceWithSingleItem(
                   {
                     id: item.id,
@@ -186,6 +199,6 @@ function MenuCard({
           </div>
         </div>
       </Card>
-    </motion.div>
+    </div>
   );
 }

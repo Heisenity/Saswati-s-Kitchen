@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { CartProvider } from "@/components/cart/cart-provider";
 import { ScrollReset } from "@/components/site/scroll-reset";
-import "@/app/globals.css";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Saswati’s Kitchen",
