@@ -28,8 +28,10 @@ export function Hero() {
         </div>
 
         <div className="surface bridge-grid relative overflow-hidden p-4 sm:p-5">
-          <div className="absolute right-4 top-4 sm:right-5 sm:top-5">
-            <Badge className="bg-mustard/25 text-foreground">Premium Bengali Lunch</Badge>
+          <div className="absolute inset-x-4 top-4 z-10 flex justify-end sm:inset-x-5 sm:top-5">
+            <Badge className="max-w-[16rem] whitespace-normal bg-mustard/25 px-4 py-2 text-right leading-tight text-foreground sm:max-w-[22rem]">
+              Premium Bengali Lunch
+            </Badge>
           </div>
           <Image
             src="/brand/mutton-thali.jpg"
