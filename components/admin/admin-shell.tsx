@@ -40,7 +40,7 @@ export function AdminShell({
             </form>
           </aside>
 
-          <main className="flex-1">
+          <main className="min-w-0 flex-1">
             <div className="mb-6">
               <h1 className="font-serif text-4xl">{title}</h1>
             </div>

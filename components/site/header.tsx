@@ -6,28 +6,34 @@ import { ChevronDown } from "lucide-react";
 import { HeaderActions } from "@/components/site/header-actions";
 
 export function Header() {
-  function selectMenu(type: "LUNCH" | "DINNER", button: HTMLButtonElement) {
+  function selectMenu(type: "LUNCH" | "DINNER", button?: HTMLButtonElement) {
+    const menu = document.getElementById("menu");
+    if (!menu) {
+      window.location.assign(`/?menu=${type.toLowerCase()}#menu`);
+      return;
+    }
+
     window.dispatchEvent(new CustomEvent("menu-filter", { detail: type }));
-    button.closest("details")?.removeAttribute("open");
-    document.getElementById("menu")?.scrollIntoView({ behavior: "smooth" });
+    button?.closest("details")?.removeAttribute("open");
+    menu.scrollIntoView({ behavior: "smooth" });
   }
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-3">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
+        <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
           <Image
             src="/brand/logo.jpg"
             alt="Saswati's Kitchen logo"
             width={56}
             height={56}
-            className="h-12 w-12 rounded-2xl border border-border bg-white object-cover"
+            className="h-10 w-10 shrink-0 rounded-xl border border-border bg-white object-cover sm:h-12 sm:w-12 sm:rounded-2xl"
             sizes="48px"
             priority
           />
-          <div>
-            <p className="font-serif text-xl leading-none">Saswati’s Kitchen</p>
-            <p className="text-xs uppercase tracking-[0.22em] text-stone-500">
+          <div className="min-w-0">
+            <p className="truncate font-serif text-base leading-none sm:text-xl">Saswati’s Kitchen</p>
+            <p className="mt-1 hidden text-[10px] uppercase tracking-[0.16em] text-stone-500 min-[390px]:block sm:text-xs sm:tracking-[0.22em]">
               Homemade meals
             </p>
           </div>
@@ -53,7 +59,7 @@ export function Header() {
           <a href="#support" data-open-chat="true">Support</a>
         </div>
 
-        <HeaderActions />
+        <HeaderActions onSelectMenu={selectMenu} />
       </div>
     </header>
   );

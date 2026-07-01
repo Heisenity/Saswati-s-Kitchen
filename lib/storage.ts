@@ -139,9 +139,7 @@ async function uploadFileToR2(
 }
 
 export async function uploadPaymentProof(file: File) {
-  if (file.size <= 0 || file.size > 15 * 1024 * 1024) {
-    throw new Error("Invalid file size.");
-  }
+  await validateUploadFile(file, paymentProofUploadOptions);
 
   try {
     return await uploadFileToR2(file, "payment-proofs");

@@ -12,7 +12,17 @@ function handleAdminError(error: unknown) {
   }
 
   if (error instanceof ZodError) {
-    return rejectJson(400, "Invalid request");
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Invalid menu data",
+        issues: error.issues.map((issue) => ({
+          path: issue.path.join("."),
+          message: issue.message
+        }))
+      },
+      { status: 400 }
+    );
   }
 
   console.error(error);

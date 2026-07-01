@@ -39,6 +39,9 @@ export function MenuSection({ items }: MenuSectionProps) {
   const addOns = items.filter((item) => item.itemKind === "ADD_ON" && item.mealType === mealType);
 
   useEffect(() => {
+    const requestedMenu = new URLSearchParams(window.location.search).get("menu")?.toUpperCase();
+    if (requestedMenu === "LUNCH" || requestedMenu === "DINNER") setMealType(requestedMenu);
+
     function changeMenu(event: Event) {
       const nextMealType = (event as CustomEvent<VisibleMealType>).detail;
       if (nextMealType === "LUNCH" || nextMealType === "DINNER") setMealType(nextMealType);
@@ -49,8 +52,8 @@ export function MenuSection({ items }: MenuSectionProps) {
   }, []);
 
   return (
-    <section id="menu" className="section-padding">
-      <div className="mx-auto max-w-7xl">
+    <section id="menu" className="section-padding w-full max-w-full overflow-hidden">
+      <div className="mx-auto w-full min-w-0 max-w-7xl">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.26em] text-primary">
@@ -82,7 +85,7 @@ export function MenuSection({ items }: MenuSectionProps) {
           </div>
         </div>
 
-        <div key={mealType} className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3 animate-[menu-fade_.28s_ease-out]">
+        <div key={mealType} className="mt-10 grid min-w-0 grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 animate-[menu-fade_.28s_ease-out]">
           {thalis.map((item) => (
             <MenuCard
               item={item}
@@ -99,7 +102,7 @@ export function MenuSection({ items }: MenuSectionProps) {
           <div className="mt-14 border-t border-border pt-10">
             <p className="text-sm font-semibold uppercase tracking-[0.26em] text-primary">Customise your meal</p>
             <h3 className="mt-3 font-serif text-3xl">Add a little extra</h3>
-            <div key={`addons-${mealType}`} className="mt-7 grid gap-6 md:grid-cols-2 xl:grid-cols-3 animate-[menu-fade_.28s_ease-out]">
+            <div key={`addons-${mealType}`} className="mt-7 grid min-w-0 grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 animate-[menu-fade_.28s_ease-out]">
               {addOns.map((item) => (
                 <MenuCard
                   item={item}
@@ -154,8 +157,8 @@ function MenuCard({
   }
 
   return (
-    <div>
-      <Card className="overflow-hidden p-4">
+    <div className="w-full min-w-0 max-w-full">
+      <Card className="w-full min-w-0 max-w-full overflow-hidden p-4">
         <Image
           src={item.imageUrl}
           alt={item.name}
@@ -166,23 +169,23 @@ function MenuCard({
           quality={82}
           loading="lazy"
         />
-        <div className="mt-5 flex items-start justify-between gap-4">
-          <div>
+        <div className="mt-5 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0">
             <Badge>{item.badge}</Badge>
-            <h3 className="mt-3 font-serif text-2xl">{item.name}</h3>
+            <h3 className="mt-3 break-words font-serif text-2xl">{item.name}</h3>
           </div>
-          <p className="text-lg font-semibold text-primary">{formatCurrency(item.price)}</p>
+          <p className="break-words text-lg font-semibold text-primary sm:shrink-0">{formatCurrency(item.price)}</p>
         </div>
-        <p className="mt-3 text-sm leading-7 text-stone-600">{item.description}</p>
+        <p className="mt-3 break-words text-sm leading-7 text-stone-600">{item.description}</p>
         <ul className="mt-4 grid gap-2 text-sm text-stone-700">
           {item.components.map((component) => (
-            <li key={component.itemName} className="rounded-2xl bg-muted px-3 py-2">
+            <li key={component.itemName} className="max-w-full break-words rounded-2xl bg-muted px-3 py-2">
               {component.itemName}
             </li>
           ))}
         </ul>
-        <div className="mt-5 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 rounded-full border border-border bg-white p-1">
+        <div className="mt-5 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex w-full items-center justify-between gap-2 rounded-full border border-border bg-white p-1 sm:w-auto">
             <button
               type="button"
               className="rounded-full px-3 py-2"
@@ -205,10 +208,10 @@ function MenuCard({
               +
             </button>
           </div>
-          <div className="flex flex-1 justify-end gap-2">
+          <div className="grid w-full min-w-0 grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:flex sm:flex-1 sm:justify-end">
             <Button
               size="sm"
-              className="min-w-[118px] transition-transform duration-200 hover:-translate-y-0.5"
+              className="w-full transition-transform duration-200 hover:-translate-y-0.5 sm:w-auto sm:min-w-[118px]"
               variant="outline"
               disabled={quantity === 0}
               onClick={async (event) => {
@@ -231,7 +234,7 @@ function MenuCard({
             </Button>
             <Button
               size="sm"
-              className="min-w-[108px] transition-transform duration-200 hover:-translate-y-0.5"
+              className="w-full transition-transform duration-200 hover:-translate-y-0.5 sm:w-auto sm:min-w-[108px]"
               disabled={quantity === 0}
               onClick={async (event) => {
                 event.stopPropagation();

@@ -527,7 +527,7 @@ export function ChatWidget() {
   );
 
   return (
-    <div className="fixed bottom-5 right-4 z-[80] flex flex-col items-end gap-3 sm:bottom-6 sm:right-6 sm:gap-4">
+    <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-3 z-[80] flex max-w-[calc(100vw-1.5rem)] flex-col items-end gap-2 sm:bottom-6 sm:right-6 sm:gap-4">
       {open ? (
         <div className="w-[min(360px,calc(100vw-2rem))] rounded-[28px] border border-border bg-card p-4 shadow-2xl">
           <div className="flex items-center justify-between">
@@ -694,7 +694,7 @@ export function ChatWidget() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Chat on WhatsApp"
-          className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] text-white shadow-[0_14px_35px_rgba(37,211,102,0.35)] transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-[0_18px_45px_rgba(37,211,102,0.45)] sm:h-16 sm:w-16"
+          className="group relative flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] text-white shadow-[0_14px_35px_rgba(37,211,102,0.35)] transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-[0_18px_45px_rgba(37,211,102,0.45)] sm:h-16 sm:w-16"
           animate={{ y: [0, -6, 0] }}
           transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
         >
@@ -715,7 +715,7 @@ export function ChatWidget() {
 
       <button
         type="button"
-        className="relative ml-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-xl sm:h-16 sm:w-16"
+        className="relative ml-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white shadow-xl sm:h-16 sm:w-16"
         onClick={() => setOpen((current) => !current)}
         aria-label="Open live chat"
       >

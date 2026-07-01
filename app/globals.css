@@ -14,10 +14,12 @@
 
 html {
   scroll-behavior: smooth;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
-  @apply bg-background font-sans text-foreground antialiased;
+  @apply max-w-full overflow-x-hidden bg-background font-sans text-foreground antialiased;
   background-image:
     radial-gradient(circle at top left, rgba(231, 182, 62, 0.12), transparent 28%),
     linear-gradient(180deg, rgba(255, 250, 241, 0.98), rgba(255, 248, 239, 1));

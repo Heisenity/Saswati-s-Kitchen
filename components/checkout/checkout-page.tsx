@@ -39,6 +39,11 @@ type UploadedPaymentProof = {
   analysis: PaymentProofAnalysis;
 };
 
+const paymentProofTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
+const paymentProofMaxBytes = 8 * 1024 * 1024;
+const paymentProofUploadError =
+  "Payment screenshot upload failed. Please try again or use a JPG/PNG/WebP under 8 MB.";
+
 export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
   const router = useRouter();
   const { items, subtotal, clearCart } = useCart();
@@ -209,6 +214,16 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
       return;
     }
 
+    if (!paymentProofTypes.has(nextFile.type)) {
+      setError("Please upload a JPG, PNG, or WebP payment screenshot.");
+      return;
+    }
+
+    if (nextFile.size <= 0 || nextFile.size > paymentProofMaxBytes) {
+      setError("Payment screenshot must be smaller than 8 MB.");
+      return;
+    }
+
     const uploadRequestId = latestUploadRequest.current + 1;
     latestUploadRequest.current = uploadRequestId;
     setUploadingProof(true);
@@ -222,11 +237,20 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
         method: "POST",
         body: formData
       });
-      const uploadResult = await uploadResponse.json();
+      const responseText = await uploadResponse.text();
+      let uploadResult: { ok?: boolean; url?: string; analysis?: PaymentProofAnalysis; error?: string };
+
+      try {
+        uploadResult = JSON.parse(responseText);
+      } catch {
+        throw new Error(paymentProofUploadError);
+      }
 
       if (!uploadResponse.ok || !uploadResult.ok) {
-        throw new Error(uploadResult.error ?? "Could not upload payment screenshot.");
+        throw new Error(uploadResult.error ?? paymentProofUploadError);
       }
+
+      if (!uploadResult.url || !uploadResult.analysis) throw new Error(paymentProofUploadError);
 
       if (latestUploadRequest.current !== uploadRequestId) {
         return;
@@ -309,14 +333,14 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
   }
 
   return (
-    <div className="section-padding">
-      <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <Card className="p-6">
-            <div className="flex items-center justify-between gap-4">
+    <div className="section-padding w-full max-w-full overflow-hidden">
+      <div className="mx-auto grid w-full min-w-0 max-w-7xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+        <form onSubmit={handleSubmit} className="min-w-0 space-y-6">
+          <Card className="min-w-0 p-4 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Checkout</p>
-                <h1 className="mt-3 font-serif text-4xl">Finish your order</h1>
+                <h1 className="mt-3 font-serif text-3xl sm:text-4xl">Finish your order</h1>
               </div>
               <Link href="/" className={cn(buttonVariants({ variant: "outline" }))}>
                 Back to home
@@ -389,7 +413,7 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
           </Card>
 
           {!hasLocation || outOfRange ? null : (
-            <Card className="p-6">
+            <Card className="min-w-0 p-4 sm:p-6">
               <div className="grid gap-6 md:grid-cols-[0.8fr_1.2fr]">
                 <div className="rounded-[24px] border border-border bg-white p-4">
                   <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Pay exact advance</p>
@@ -416,6 +440,7 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
                   <div className="mt-5 space-y-4">
                     <input
                       type="file"
+                      accept="image/png,image/jpeg,image/webp"
                       className="block w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm"
                       onChange={(event) => handlePaymentProofChange(event.target.files?.[0] ?? null)}
                       required
@@ -456,12 +481,12 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
           </Button>
         </form>
 
-        <Card className="h-fit p-6">
+        <Card className="h-fit min-w-0 p-4 sm:p-6">
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Order Summary</p>
           <div className="mt-5 space-y-4">
             {items.map((item) => (
-              <div key={item.id} className="flex items-center justify-between rounded-2xl bg-muted px-4 py-3 text-sm">
-                <div>
+              <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl bg-muted px-4 py-3 text-sm">
+                <div className="min-w-0">
                   <p className="font-semibold">{item.name}</p>
                   <p className="text-stone-500">Qty {item.quantity}</p>
                 </div>

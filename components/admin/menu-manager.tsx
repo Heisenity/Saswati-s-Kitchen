@@ -72,23 +72,52 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
 
   async function submitForm(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSaving(true);
     setMessage("");
     const currentItem = editingId ? items.find((item) => item.id === editingId) : null;
+    const price = Number(form.price);
+    const stockLimit = Number(form.stockLimit);
+    const components = form.components.split(",").map((item) => item.trim()).filter(Boolean);
+
+    if (!/^\d+$/.test(form.price) || !Number.isInteger(price) || price < 1) {
+      setMessage("Price must be a number only, for example 149. Do not use ₹ symbol.");
+      return;
+    }
+    if (!/^\d+$/.test(form.stockLimit) || !Number.isInteger(stockLimit) || stockLimit < 0) {
+      setMessage("Stock must be a whole number, for example 20.");
+      return;
+    }
+    if (form.description.trim().length < 8) {
+      setMessage("Description must be at least 8 characters.");
+      return;
+    }
+    if (!form.imageUrl.trim()) {
+      setMessage("Add an image URL or upload a menu image.");
+      return;
+    }
+    if (form.badge.trim().length < 2) {
+      setMessage("Badge must be at least 2 characters.");
+      return;
+    }
+    if (!components.length) {
+      setMessage("Add at least one included item, separated by commas.");
+      return;
+    }
+
+    setSaving(true);
 
     const payload = {
       id: editingId ?? undefined,
       name: form.name,
-      slug: slugify(form.name),
-      description: form.description,
+      slug: currentItem?.slug ?? `${form.mealType.toLowerCase()}-${slugify(form.name)}-${crypto.randomUUID().slice(0, 8)}`,
+      description: form.description.trim(),
       price: Number(form.price),
-      imageUrl: form.imageUrl,
+      imageUrl: form.imageUrl.trim(),
       mealType: form.mealType as "LUNCH" | "DINNER",
       itemKind: form.itemKind as "THALI" | "ADD_ON",
-      badge: form.badge,
+      badge: form.badge.trim(),
       isActive: currentItem?.isActive ?? true,
       stockLimit: Number(form.stockLimit),
-      components: form.components.split(",").map((item) => item.trim()).filter(Boolean)
+      components
     };
 
     const response = await fetch("/api/admin/menu", {
@@ -96,11 +125,19 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
-    const result = await response.json();
+    const result = await response.json().catch(() => ({
+      ok: false,
+      error: "Could not save menu item. Please try again."
+    }));
     setSaving(false);
 
     if (!result.ok) {
-      setMessage(result.error ?? "Could not save menu item.");
+      const issues = Array.isArray(result.issues)
+        ? result.issues.map((issue: { path?: string; message?: string }) =>
+            `${issue.path || "field"}: ${issue.message || "Invalid value"}`
+          ).join(" · ")
+        : "";
+      setMessage(issues || result.error || "Could not save menu item.");
       return;
     }
 
@@ -256,8 +293,8 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
           </button>
         ))}
       </div>
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-      <Card className="p-6">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+      <Card className="min-w-0 p-4 sm:p-6">
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">
           {editingId ? "Edit menu item" : "Add menu item"}
         </p>
@@ -277,6 +314,7 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
             <div className="space-y-2">
               <label className="text-sm font-semibold text-stone-700">Price (INR)</label>
               <Input placeholder="149" type="number" min="1" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} />
+              <p className="text-xs text-stone-500">Enter number only, e.g. 149. Do not add ₹.</p>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold text-stone-700">Badge</label>
@@ -392,9 +430,9 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
         </Card>
 
         {visibleItems.map((item) => (
-          <Card key={item.id} className="p-5">
+          <Card key={item.id} className="min-w-0 p-4 sm:p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="flex gap-4">
+              <div className="flex min-w-0 gap-3 sm:gap-4">
                 <label className="mt-1 flex shrink-0 items-center">
                   <input
                     type="checkbox"
@@ -403,8 +441,8 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
                     onChange={() => toggleSelected(item.id)}
                   />
                 </label>
-                <img src={item.imageUrl} alt={item.name} className="h-24 w-24 rounded-2xl object-cover" />
-                <div>
+                <img src={item.imageUrl} alt={item.name} className="h-16 w-16 shrink-0 rounded-2xl object-cover sm:h-24 sm:w-24" />
+                <div className="min-w-0 break-words">
                   <div className="flex flex-wrap items-center gap-3">
                     <h3 className="font-serif text-2xl">{item.name}</h3>
                     <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold">{item.badge}</span>
