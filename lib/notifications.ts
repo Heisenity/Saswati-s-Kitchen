@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { env } from "@/lib/env";
+import { env, getTelegramChatIds } from "@/lib/env";
 import { formatPaymentProofAnalysis, type PaymentProofAnalysis } from "@/lib/payment-proof";
 
 type OrderLike = {
@@ -26,17 +26,22 @@ function canSendMail() {
 }
 
 async function sendTelegramMessage(message: string) {
-  if (!env.telegramBotToken || !env.telegramChatId) return;
+  const chatIds = getTelegramChatIds();
+  if (!env.telegramBotToken || chatIds.length === 0) return;
 
   const url = `https://api.telegram.org/bot${env.telegramBotToken}/sendMessage`;
-  await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: env.telegramChatId,
-      text: message
-    })
-  }).catch(() => null);
+  await Promise.allSettled(
+    chatIds.map((chatId) =>
+      fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: message
+        })
+      })
+    )
+  );
 }
 
 function buildLocationLine(order: OrderLike) {
@@ -66,19 +71,24 @@ async function getAttachmentFile(url: string, orderNumber: string) {
 }
 
 async function sendTelegramAttachment(caption: string, url: string, orderNumber: string) {
-  if (!env.telegramBotToken || !env.telegramChatId || !url) return;
+  const chatIds = getTelegramChatIds();
+  if (!env.telegramBotToken || chatIds.length === 0 || !url) return;
 
   try {
     const file = await getAttachmentFile(url, orderNumber);
-    const formData = new FormData();
-    formData.append("chat_id", env.telegramChatId);
-    formData.append("caption", caption.slice(0, 900));
-    formData.append("document", file);
+    await Promise.allSettled(
+      chatIds.map((chatId) => {
+        const formData = new FormData();
+        formData.append("chat_id", chatId);
+        formData.append("caption", caption.slice(0, 900));
+        formData.append("document", file);
 
-    await fetch(`https://api.telegram.org/bot${env.telegramBotToken}/sendDocument`, {
-      method: "POST",
-      body: formData
-    });
+        return fetch(`https://api.telegram.org/bot${env.telegramBotToken}/sendDocument`, {
+          method: "POST",
+          body: formData
+        });
+      })
+    );
   } catch (error) {
     console.error("[telegram:payment-proof-send-failed]", {
       orderNumber,

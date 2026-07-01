@@ -19,6 +19,10 @@ export const env = {
   r2Bucket: process.env.R2_BUCKET,
   r2PublicUrl: process.env.R2_PUBLIC_URL,
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
+  telegramChatIds:
+    process.env.TELEGRAM_CHAT_IDS ??
+    process.env.TELEGRAM_CHAT_ID ??
+    "",
   telegramChatId: process.env.TELEGRAM_CHAT_ID,
   smtpHost: process.env.SMTP_HOST,
   smtpPort: Number(process.env.SMTP_PORT ?? "587"),
@@ -44,4 +48,11 @@ export function getAdminEmailAllowlist() {
 
 export function isWhitelistedAdminEmail(email?: string | null) {
   return Boolean(email && getAdminEmailAllowlist().includes(email.trim().toLowerCase()));
+}
+
+export function getTelegramChatIds() {
+  return env.telegramChatIds
+    .split(",")
+    .map((chatId) => chatId.trim())
+    .filter(Boolean);
 }
