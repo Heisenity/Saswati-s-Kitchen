@@ -151,11 +151,17 @@ export async function uploadPaymentProof(file: File) {
 }
 
 export async function uploadMenuImage(file: File) {
-  return uploadFileToR2(file, "menu-images", {
-    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
-    allowedExtensions: ["jpg", "jpeg", "png", "webp"],
-    maxBytes: 8 * 1024 * 1024
-  });
+  try {
+    return await uploadFileToR2(file, "menu-images", {
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+      allowedExtensions: ["jpg", "jpeg", "png", "webp"],
+      maxBytes: 8 * 1024 * 1024
+    });
+  } catch (error) {
+    logR2UploadError("menu-images", error);
+    // ponytail: admin can keep editing even when R2 is unhappy; inline image data still renders from Postgres
+    return fileToDataUrl(file);
+  }
 }
 
 export async function uploadChatAttachment(file: File, maxBytes = 5 * 1024 * 1024) {

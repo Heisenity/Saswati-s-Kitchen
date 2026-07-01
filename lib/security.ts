@@ -66,7 +66,34 @@ export function applyRateLimit(request: Request, options: RateLimitOptions) {
 export function hasTrustedOrigin(request: Request) {
   if (!mutatingMethods.has(request.method.toUpperCase())) return true;
 
-  const trustedOrigins = new Set([new URL(env.appUrl).origin, new URL(request.url).origin]);
+  const trustedOrigins = new Set<string>();
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = request.headers.get("host")?.trim();
+  const secFetchSite = request.headers.get("sec-fetch-site")?.trim().toLowerCase();
+
+  try {
+    trustedOrigins.add(new URL(env.appUrl).origin);
+  } catch {
+    // ponytail: local fallback covers misconfigured public app URL
+  }
+
+  try {
+    trustedOrigins.add(new URL(request.url).origin);
+  } catch {
+    // ponytail: keep checking forwarded/public origins below
+  }
+
+  if (forwardedProto && forwardedHost) {
+    trustedOrigins.add(`${forwardedProto}://${forwardedHost}`);
+  }
+
+  if (host) {
+    trustedOrigins.add(`${forwardedProto ?? "https"}://${host}`);
+    trustedOrigins.add(`http://${host}`);
+    trustedOrigins.add(`https://${host}`);
+  }
+
   const candidates = [request.headers.get("origin"), request.headers.get("referer")]
     .filter(Boolean)
     .map((value) => {
@@ -79,7 +106,7 @@ export function hasTrustedOrigin(request: Request) {
     .filter(Boolean);
 
   if (!candidates.length) {
-    return process.env.NODE_ENV === "development";
+    return process.env.NODE_ENV === "development" || secFetchSite === "same-origin" || secFetchSite === "same-site" || secFetchSite === "none";
   }
 
   return candidates.some((origin) => origin && trustedOrigins.has(origin));

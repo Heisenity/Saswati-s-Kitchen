@@ -62,6 +62,23 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
   const [viewMealType, setViewMealType] = useState<"LUNCH" | "DINNER">("LUNCH");
   const visibleItems = items.filter((item) => item.mealType === viewMealType);
 
+  async function readApiResult(response: Response, fallbackError: string) {
+    const text = await response.text();
+
+    try {
+      return JSON.parse(text) as {
+        ok?: boolean;
+        error?: string;
+        url?: string;
+        item?: MenuRow;
+        items?: MenuRow[];
+        issues?: Array<{ path?: string; message?: string }>;
+      };
+    } catch {
+      return { ok: false, error: response.ok ? fallbackError : "Server request failed. Please try again." };
+    }
+  }
+
   function syncItems(updater: MenuRow[] | ((current: MenuRow[]) => MenuRow[])) {
     setItems((current) => {
       const nextItems = typeof updater === "function" ? updater(current) : updater;
@@ -125,10 +142,7 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
-    const result = await response.json().catch(() => ({
-      ok: false,
-      error: "Could not save menu item. Please try again."
-    }));
+    const result = await readApiResult(response, "Could not save menu item. Please try again.");
     setSaving(false);
 
     if (!result.ok) {
@@ -140,11 +154,16 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
       setMessage(issues || result.error || "Could not save menu item.");
       return;
     }
+    if (!result.item) {
+      setMessage("Could not save menu item. Please try again.");
+      return;
+    }
+    const savedItem = result.item;
 
     syncItems((current) =>
       editingId
-        ? current.map((row) => (row.id === result.item.id ? result.item : row))
-        : [result.item, ...current]
+        ? current.map((row) => (row.id === savedItem.id ? savedItem : row))
+        : [savedItem, ...current]
     );
     setForm(createEmptyForm(viewMealType));
     setEditingId(null);
@@ -161,10 +180,12 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
         isActive: !item.isActive
       })
     });
-    const result = await response.json();
+    const result = await readApiResult(response, "Could not update menu item.");
     if (!result.ok) return;
+    if (!result.item) return;
 
-    syncItems((current) => current.map((row) => (row.id === item.id ? result.item : row)));
+    const updatedItem = result.item;
+    syncItems((current) => current.map((row) => (row.id === item.id ? updatedItem : row)));
   }
 
   function startEditing(item: MenuRow) {
@@ -201,7 +222,7 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
     const response = await fetch(`/api/admin/menu?id=${encodeURIComponent(item.id)}`, {
       method: "DELETE"
     });
-    const result = await response.json();
+    const result = await readApiResult(response, "Could not delete menu item.");
     if (!result.ok) {
       setMessage(result.error ?? "Could not delete menu item.");
       return;
@@ -236,11 +257,15 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
         component: bulkComponent.trim()
       })
     });
-    const result = await response.json();
+    const result = await readApiResult(response, "Could not update the selected thalis.");
     setBulkSaving(false);
 
     if (!result.ok) {
       setMessage(result.error ?? "Could not update the selected thalis.");
+      return;
+    }
+    if (!result.items) {
+      setMessage("Could not update the selected thalis.");
       return;
     }
 
@@ -264,15 +289,20 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
       method: "POST",
       body: formData
     });
-    const result = await response.json();
+    const result = await readApiResult(response, "Image upload failed.");
     setUploadingImage(false);
 
     if (!result.ok) {
       setMessage(result.error ?? "Image upload failed.");
       return;
     }
+    if (!result.url) {
+      setMessage("Image upload failed.");
+      return;
+    }
 
-    setForm((current) => ({ ...current, imageUrl: result.url }));
+    const nextImageUrl = result.url;
+    setForm((current) => ({ ...current, imageUrl: nextImageUrl }));
     setMessage("Image uploaded. Save the menu item to keep it.");
   }
 
