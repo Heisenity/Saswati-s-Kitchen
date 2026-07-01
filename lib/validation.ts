@@ -3,6 +3,12 @@ import { paymentProofAnalysisSchema } from "@/lib/payment-proof";
 
 export const orderSchema = z.object({
   checkoutToken: z.string().min(10),
+  quoteId: z.string().optional(),
+  quoteToken: z.string().optional(),
+  manualDeliveryReviewRequired: z.boolean().optional(),
+  deliveryChargeStatus: z.enum(["PENDING_ADMIN_REVIEW"]).optional(),
+  geocodeProvider: z.string().min(2).optional(),
+  locationConfidence: z.number().min(0).max(1).optional(),
   customerName: z.string().min(2),
   phone: z.string().min(10),
   address: z.string().min(8),
@@ -60,7 +66,8 @@ export const customerPresenceSchema = z.object({
 
 export const geocodeSchema = z.object({
   address: z.string().min(5),
-  landmark: z.string().optional()
+  landmark: z.string().optional(),
+  subtotal: z.number().int().min(0).optional()
 });
 
 export const menuItemSchema = z.object({

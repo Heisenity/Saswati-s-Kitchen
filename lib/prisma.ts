@@ -10,6 +10,7 @@ import type {
   UserRole
 } from "@/lib/db-types";
 import { env } from "@/lib/env";
+import { toDateValue } from "@/lib/utils";
 
 type DbClient = Pool | PoolClient;
 
@@ -175,7 +176,7 @@ function parseJsonArray<T>(value: T[] | string | null | undefined) {
 }
 
 function asDate(value: Date | string | null | undefined) {
-  return value ? new Date(value) : value ?? null;
+  return value ? toDateValue(value) : value ?? null;
 }
 
 function mapProfile(row: ProfileRow | null) {

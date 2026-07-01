@@ -13,6 +13,7 @@ import {
   type ChatAttachment
 } from "@/lib/chat";
 import { cn } from "@/lib/utils";
+import { toDateValue } from "@/lib/utils";
 
 type Message = {
   id: string;
@@ -79,7 +80,7 @@ function formatLastSeen(value?: string | null) {
     minute: "2-digit",
     hour12: true,
     timeZone: "Asia/Kolkata"
-  }).format(new Date(value))}`;
+  }).format(toDateValue(value))}`;
 }
 
 function AttachmentBubble({ attachment }: { attachment: ChatAttachment }) {
@@ -523,7 +524,7 @@ export function AdminChatPanel() {
           </span>
         </div>
         {error ? <p className="mt-3 text-sm text-primary">{error}</p> : null}
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 max-h-[68vh] space-y-3 overflow-y-auto pr-1">
           {threads.map((thread) => {
             const selected = activeThread?.id === thread.id;
 

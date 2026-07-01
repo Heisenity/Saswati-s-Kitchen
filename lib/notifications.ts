@@ -118,23 +118,34 @@ async function sendEmail(subject: string, html: string) {
   });
 }
 
-export async function sendNewOrderNotification(order: OrderLike) {
-  const items = order.items?.map((item) => `${item.itemName} x${item.quantity}`).join(", ") ?? "";
+export async function sendNewOrderNotification(
+  order: OrderLike,
+  options?: { manualDeliveryReviewRequired?: boolean }
+) {
+  const manualDeliveryReviewRequired =
+    Boolean(options?.manualDeliveryReviewRequired) || order.distanceKm == null;
+  const items =
+    order.items?.map((item) => `- ${item.itemName} x${item.quantity}`).join("\n") ?? "Not available";
   const locationLine = buildLocationLine(order);
   const message = [
-    "New order placed",
+    manualDeliveryReviewRequired ? "🚨 Manual delivery review required" : "New order placed",
     `Order ID: ${order.orderNumber}`,
     `Name: ${order.customerName}`,
     `Phone: ${order.phone}`,
     `Slot: ${order.slotType}`,
-    `Items: ${items}`,
-    `Subtotal: ₹${order.subtotal}`,
-    `Delivery: ₹${order.deliveryCharge}`,
+    manualDeliveryReviewRequired ? `Address entered by customer: ${order.address}` : `Address: ${order.address}`,
+    `Landmark: ${order.landmark ?? "Not provided"}`,
+    manualDeliveryReviewRequired ? "Delivery charge: To be confirmed manually by admin" : null,
+    "Items:",
+    items,
+    `Food subtotal: ₹${order.subtotal}`,
+    manualDeliveryReviewRequired ? "Delivery charge: Pending admin confirmation" : `Delivery: ₹${order.deliveryCharge}`,
     `Total: ₹${order.totalAmount}`,
-    `Advance: ₹${order.advanceAmount}`,
-    `Balance: ₹${order.balanceAmount}`,
-    `Distance: ${order.distanceKm?.toFixed(2) ?? "0"} km`,
-    `Address: ${order.address}`,
+    `Advance paid/payable: ₹${order.advanceAmount}`,
+    `Balance amount: ₹${order.balanceAmount}`,
+    manualDeliveryReviewRequired
+      ? "Distance: Pending manual review"
+      : `Distance: ${order.distanceKm?.toFixed(2) ?? "0"} km`,
     locationLine,
     `Screenshot: ${order.paymentScreenshotUrl ?? "Not submitted"}`
   ]

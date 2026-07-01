@@ -11,11 +11,15 @@ type OrderRow = {
   customerName: string;
   phone: string;
   address: string;
+  landmark: string | null;
   slotType: string;
   paymentStatus: string;
   orderStatus: string;
+  deliveryCharge: number;
   totalAmount: number;
   advanceAmount: number;
+  balanceAmount: number;
+  distanceKm: number | null;
   paymentScreenshotUrl: string | null;
   createdAt: string | Date;
   items: Array<{ id: string; itemName: string; quantity: number }>;
@@ -82,6 +86,10 @@ export function OrderManager({ initialOrders }: { initialOrders: OrderRow[] }) {
       </div>
       {visibleOrders.map((order) => (
         <Card key={order.id} className="p-6">
+          {(() => {
+            const manualDeliveryReview = order.distanceKm == null;
+
+            return (
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">{order.orderNumber}</p>
@@ -90,6 +98,20 @@ export function OrderManager({ initialOrders }: { initialOrders: OrderRow[] }) {
                 {order.phone} · {order.slotType} · {formatDateTime(order.createdAt)}
               </p>
               <p className="mt-3 text-sm text-stone-700">{order.address}</p>
+              {order.landmark ? (
+                <p className="mt-1 text-xs text-stone-500">Landmark: {order.landmark}</p>
+              ) : null}
+              <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                {manualDeliveryReview ? (
+                  <span className="rounded-full bg-amber-100 px-3 py-2 font-semibold text-amber-800">
+                    Manual delivery review
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-muted px-3 py-2 text-stone-600">
+                    {order.distanceKm?.toFixed(2)} km • Delivery {formatCurrency(order.deliveryCharge)}
+                  </span>
+                )}
+              </div>
               <div className="mt-3 flex flex-wrap gap-2 text-sm">
                 {order.items.map((item) => (
                   <span key={item.id} className="rounded-full bg-muted px-3 py-2">
@@ -98,8 +120,13 @@ export function OrderManager({ initialOrders }: { initialOrders: OrderRow[] }) {
                 ))}
               </div>
               <p className="mt-4 text-sm font-medium">
-                Total {formatCurrency(order.totalAmount)} | Advance {formatCurrency(order.advanceAmount)}
+                Total {formatCurrency(order.totalAmount)} | Advance {formatCurrency(order.advanceAmount)} | Balance {formatCurrency(order.balanceAmount)}
               </p>
+              {manualDeliveryReview ? (
+                <p className="mt-2 text-xs text-amber-700">
+                  Delivery charge is pending admin confirmation for this typed address.
+                </p>
+              ) : null}
               {order.paymentScreenshotUrl ? (
                 <div className="mt-4 space-y-3">
                   <div className="flex flex-wrap gap-2">
@@ -162,6 +189,8 @@ export function OrderManager({ initialOrders }: { initialOrders: OrderRow[] }) {
               </p>
             </div>
           </div>
+            );
+          })()}
         </Card>
       ))}
       {visibleOrders.length === 0 ? <Card className="p-6 text-sm text-stone-500">No orders found for this filter.</Card> : null}

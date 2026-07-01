@@ -13,12 +13,17 @@ export function formatCurrency(value: number) {
   }).format(value);
 }
 
+export function toDateValue(date: string | Date) {
+  if (typeof date !== "string") return new Date(date);
+  return new Date(!/(z|[+-]\d{2}:?\d{2})$/i.test(date) ? `${date}Z` : date);
+}
+
 export function formatDateTime(date: string | Date) {
   return new Intl.DateTimeFormat("en-IN", {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone: "Asia/Kolkata"
-  }).format(new Date(date));
+  }).format(toDateValue(date));
 }
 
 export function slugify(value: string) {

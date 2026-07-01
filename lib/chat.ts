@@ -1,3 +1,5 @@
+import { toDateValue } from "@/lib/utils";
+
 const chatAttachmentPrefix = "__ATTACHMENT__:";
 
 export type ChatAttachment = {
@@ -39,17 +41,12 @@ export function isLikelyHumanName(input: string) {
 }
 
 export function formatChatTime(date: string | Date) {
-  const value =
-    typeof date === "string" && !/(z|[+-]\d{2}:?\d{2})$/i.test(date)
-      ? `${date}Z`
-      : date;
-
   return new Intl.DateTimeFormat("en-IN", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
     timeZone: "Asia/Kolkata"
-  }).format(new Date(value));
+  }).format(toDateValue(date));
 }
 
 export function serializeChatAttachment(attachment: ChatAttachment) {

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { geocodeAddress } from "@/lib/geocode";
 import { applyRateLimit, rejectJson } from "@/lib/security";
 import { geocodeSchema } from "@/lib/validation";
 
@@ -13,15 +12,15 @@ export async function POST(request: Request) {
 
   try {
     const body = geocodeSchema.parse(await request.json());
-    const address = [body.address, body.landmark].filter(Boolean).join(", ");
-    const result = await geocodeAddress(address);
-
-    if (!result) {
-      return rejectJson(404, "We could not find that address yet.");
+    if (body.address.trim().length < 8) {
+      return rejectJson(400, "Enter your full address and try again.");
     }
 
-    return NextResponse.json({ ok: true, ...result });
+    return NextResponse.json({
+      ok: true,
+      manualDeliveryReviewRequired: true
+    });
   } catch {
-    return rejectJson(400, "Could not check this address right now.");
+    return rejectJson(400, "Enter your full address and try again.");
   }
 }

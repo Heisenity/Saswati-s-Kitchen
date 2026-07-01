@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CircleCheck, LocateFixed, LoaderCircle } from "lucide-react";
+import { Check, CircleCheck, Copy, LocateFixed, LoaderCircle } from "lucide-react";
 import { useCart } from "@/components/cart/cart-provider";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,12 @@ type UploadedPaymentProof = {
   analysis: PaymentProofAnalysis;
 };
 
+type DeliveryQuote =
+  | {
+      mode: "MANUAL_REVIEW";
+      message: string;
+    };
+
 const paymentProofMaxBytes = 6 * 1024 * 1024;
 
 async function fileToDataUrl(file: File) {
@@ -69,8 +75,8 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
   const [error, setError] = useState("");
   const [successNote, setSuccessNote] = useState("");
   const [confirmationOrderNumber, setConfirmationOrderNumber] = useState<string | null>(null);
-  const [addressLookupLoading, setAddressLookupLoading] = useState(false);
-  const [resolvedAddressQuery, setResolvedAddressQuery] = useState("");
+  const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuote | null>(null);
+  const [upiCopied, setUpiCopied] = useState(false);
   const latestUploadRequest = useRef(0);
   const addressQuery = useMemo(
     () => [address.trim(), landmark.trim()].filter(Boolean).join(", "),
@@ -78,15 +84,27 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
   );
   const hasLocation =
     Number.isFinite(location.latitude) && Number.isFinite(location.longitude);
+  const isManualDeliveryReview = deliveryQuote?.mode === "MANUAL_REVIEW";
 
   const deliveryPreview = useMemo(() => {
-    const distanceKm =
-      hasLocation
-        ? haversineDistanceKm(
-            { lat: settings.kitchenLatitude, lng: settings.kitchenLongitude },
-            { lat: location.latitude as number, lng: location.longitude as number }
-          )
-        : null;
+    if (isManualDeliveryReview) {
+      const advance = Math.ceil(subtotal / 2);
+
+      return {
+        distanceKm: null,
+        deliveryCharge: 0,
+        total: subtotal,
+        advance,
+        balance: subtotal - advance
+      };
+    }
+
+    const distanceKm = hasLocation
+      ? haversineDistanceKm(
+          { lat: settings.kitchenLatitude, lng: settings.kitchenLongitude },
+          { lat: location.latitude as number, lng: location.longitude as number }
+        )
+      : null;
 
     const deliveryCharge = calculateDeliveryCharge({
       subtotal,
@@ -106,7 +124,7 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
       advance,
       balance: total - advance
     };
-  }, [hasLocation, location.latitude, location.longitude, settings, subtotal]);
+  }, [deliveryQuote, hasLocation, isManualDeliveryReview, location.latitude, location.longitude, location.source, settings, subtotal]);
   const outOfRange =
     deliveryPreview.distanceKm !== null &&
     deliveryPreview.distanceKm > MAX_DELIVERY_DISTANCE_KM;
@@ -137,7 +155,7 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
           ...bestMatch,
           source: "gps"
         });
-        setResolvedAddressQuery("");
+        setDeliveryQuote(null);
         return;
       }
 
@@ -180,17 +198,6 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
   }
 
   useEffect(() => {
-    if (
-      location.source === "address" &&
-      resolvedAddressQuery &&
-      addressQuery !== resolvedAddressQuery
-    ) {
-      setLocation({});
-      setResolvedAddressQuery("");
-    }
-  }, [addressQuery, location.source, resolvedAddressQuery]);
-
-  useEffect(() => {
     if (!confirmationOrderNumber) return;
 
     const timeout = window.setTimeout(() => {
@@ -200,44 +207,18 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
     return () => window.clearTimeout(timeout);
   }, [confirmationOrderNumber, router]);
 
-  async function resolveAddressLocation() {
-    if (addressQuery.length < 12) {
-      setError("Enter a more complete delivery address, then tap Use this address.");
+  function resolveAddressLocation() {
+    if (addressQuery.length < 8) {
       return;
     }
 
-    setAddressLookupLoading(true);
     setError("");
-
-    try {
-      const response = await fetch("/api/geocode", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address, landmark })
-      });
-      const result = await response.json();
-
-      if (!response.ok || !result.ok) {
-        throw new Error(result.error ?? "We could not match this address yet.");
-      }
-
-      setLocation({
-        latitude: result.latitude,
-        longitude: result.longitude,
-        source: "address"
-      });
-      setResolvedAddressQuery(addressQuery);
-    } catch (lookupError) {
-      setLocation({});
-      setResolvedAddressQuery("");
-      setError(
-        lookupError instanceof Error
-          ? lookupError.message
-          : "We could not match this address yet."
-      );
-    } finally {
-      setAddressLookupLoading(false);
-    }
+    setLocation({});
+    setDeliveryQuote({
+      mode: "MANUAL_REVIEW",
+      message:
+        "Prefer not to share live location? Place the order now with just the meal advance. Our team will confirm delivery charges manually after checkout."
+    });
   }
 
   async function handlePaymentProofChange(nextFile: File | null) {
@@ -335,6 +316,16 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
     }
   }
 
+  async function copyUpiId() {
+    try {
+      await navigator.clipboard.writeText(settings.upiId);
+      setUpiCopied(true);
+      window.setTimeout(() => setUpiCopied(false), 1500);
+    } catch {
+      setError("Could not copy the UPI ID. You can still copy it manually.");
+    }
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
@@ -345,7 +336,7 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
         throw new Error("Your cart is empty.");
       }
 
-      if (!hasLocation) {
+      if (!hasLocation && !isManualDeliveryReview) {
         throw new Error("Tap Locate Me or enter a full address so we can calculate delivery correctly.");
       }
 
@@ -359,6 +350,8 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           checkoutToken,
+          manualDeliveryReviewRequired: isManualDeliveryReview,
+          deliveryChargeStatus: isManualDeliveryReview ? "PENDING_ADMIN_REVIEW" : undefined,
           customerName,
           phone,
           address,
@@ -435,24 +428,37 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
               </select>
             </div>
             <div className="mt-4">
-              <Textarea placeholder="Full address" value={address} onChange={(event) => setAddress(event.target.value)} required />
+              <Textarea
+                placeholder="Full address"
+                value={address}
+                onChange={(event) => {
+                  const nextAddress = event.target.value;
+                  setAddress(nextAddress);
+                  if (!nextAddress.trim()) {
+                    setDeliveryQuote(null);
+                  }
+                }}
+                required
+              />
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
                   onClick={resolveAddressLocation}
-                  disabled={addressLookupLoading || locating}
+                  disabled={locating}
                 >
-                  {addressLookupLoading ? (
-                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                  ) : null}
-                  {addressLookupLoading ? "Checking address..." : "Use this address"}
+                  Use this address
                 </Button>
                 <span className="text-xs text-stone-500">
-                  No GPS? Type the full address and tap this button to calculate delivery.
+                  Prefer not to share live location? Use your typed address and we will confirm delivery charges manually after checkout.
                 </span>
               </div>
+              {deliveryQuote ? (
+                <div className="mt-3 rounded-2xl border border-leaf/20 bg-leaf/10 px-4 py-3 text-xs leading-6 text-leaf">
+                  {deliveryQuote.message}
+                </div>
+              ) : null}
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <Button type="button" variant="outline" onClick={detectLocation} disabled={locating}>
@@ -471,12 +477,11 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
                   Accuracy is a bit low. Tap location again near a window for a better delivery estimate.
                 </span>
               ) : null}
-              {!hasLocation && addressLookupLoading ? (
-                <span className="text-xs text-stone-500">Checking delivery distance from your address…</span>
-              ) : null}
-              {!hasLocation && !addressLookupLoading && !locating ? (
+              {!hasLocation && !locating ? (
                 <span className="text-xs text-stone-500">
-                  Tap Locate Me or use your typed address to calculate the exact delivery fee.
+                  {isManualDeliveryReview
+                    ? "Your order keeps moving with subtotal-only advance. We will confirm delivery charges manually after checkout."
+                    : "Tap Locate Me for an instant exact delivery quote, or continue with your typed address for manual delivery confirmation."}
                 </span>
               ) : null}
               {outOfRange ? (
@@ -487,7 +492,7 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
             </div>
           </Card>
 
-          {!hasLocation || outOfRange ? null : (
+          {(!hasLocation && !isManualDeliveryReview) || outOfRange ? null : (
             <Card className="min-w-0 p-4 sm:p-6">
               <div className="grid gap-6 md:grid-cols-[0.8fr_1.2fr]">
                 <div className="rounded-[24px] border border-border bg-white p-4">
@@ -502,7 +507,13 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
                     priority
                     unoptimized
                   />
-                  <p className="mt-4 text-sm text-stone-700">UPI ID: {settings.upiId}</p>
+                  <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-stone-700">
+                    <p>UPI ID: {settings.upiId}</p>
+                    <Button type="button" size="sm" variant="outline" className="h-8 rounded-full px-3" onClick={copyUpiId}>
+                      {upiCopied ? <Check className="mr-1 h-3.5 w-3.5" /> : <Copy className="mr-1 h-3.5 w-3.5" />}
+                      {upiCopied ? "Copied" : "Copy"}
+                    </Button>
+                  </div>
                   <p className="mt-2 text-lg font-semibold text-primary">
                     Advance to pay now: {formatCurrency(deliveryPreview.advance)}
                   </p>
@@ -542,10 +553,9 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
               submitting ||
               uploadingProof ||
               locating ||
-              addressLookupLoading ||
               items.length === 0 ||
               !slotState.activeSlot ||
-              !hasLocation ||
+              (!hasLocation && !isManualDeliveryReview) ||
               outOfRange ||
               !uploadedProof?.url
             }
@@ -577,32 +587,59 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
             </div>
             <div className="flex justify-between">
               <span>Delivery charge</span>
-              <span>{hasLocation ? formatCurrency(deliveryPreview.deliveryCharge) : "Waiting for location"}</span>
+              <span>
+                {isManualDeliveryReview
+                  ? "Manually calculated by admin"
+                  : hasLocation
+                    ? formatCurrency(deliveryPreview.deliveryCharge)
+                    : "Choose GPS or manual address"}
+              </span>
             </div>
             <div className="flex justify-between">
               <span>Total</span>
               <span className="font-semibold">
-                {hasLocation ? formatCurrency(deliveryPreview.total) : "Waiting for location"}
+                {isManualDeliveryReview
+                  ? formatCurrency(deliveryPreview.total)
+                  : hasLocation
+                    ? formatCurrency(deliveryPreview.total)
+                    : "Choose GPS or manual address"}
               </span>
             </div>
             <div className="flex justify-between text-primary">
               <span>50% advance</span>
               <span className="font-semibold">
-                {hasLocation ? formatCurrency(deliveryPreview.advance) : "Waiting for location"}
+                {isManualDeliveryReview
+                  ? formatCurrency(deliveryPreview.advance)
+                  : hasLocation
+                    ? formatCurrency(deliveryPreview.advance)
+                    : "Choose GPS or manual address"}
               </span>
             </div>
             <div className="flex justify-between">
               <span>Balance amount</span>
-              <span>{hasLocation ? formatCurrency(deliveryPreview.balance) : "Waiting for location"}</span>
+              <span>
+                {isManualDeliveryReview
+                  ? formatCurrency(deliveryPreview.balance)
+                  : hasLocation
+                    ? formatCurrency(deliveryPreview.balance)
+                    : "Choose GPS or manual address"}
+              </span>
             </div>
             <div className="flex justify-between">
               <span>Distance</span>
               <span>
-                {deliveryPreview.distanceKm !== null
+                {isManualDeliveryReview
+                  ? "Will be confirmed by admin"
+                  : deliveryPreview.distanceKm !== null
                   ? `${deliveryPreview.distanceKm.toFixed(2)} km`
-                  : "Waiting for location"}
+                  : "Choose GPS or manual address"}
               </span>
             </div>
+            {isManualDeliveryReview ? (
+              <p className="rounded-2xl bg-amber-50 px-4 py-3 text-xs leading-6 text-amber-900">
+                For the fastest exact quote, tap Locate Me. Otherwise, reserve your meal now and our team will confirm delivery charges personally after checkout.
+              </p>
+            ) : null}
           </div>
         </Card>
       </div>

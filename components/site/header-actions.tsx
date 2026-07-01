@@ -14,10 +14,56 @@ type HeaderUser = {
   role?: "USER" | "ADMIN";
 } | null;
 
+const HEADER_CACHE_TTL_MS = 5 * 60 * 1000;
+
+type CachedHeaderUser = {
+  email?: string | null;
+  role?: "USER" | "ADMIN";
+  expiresAt: number;
+};
+
 export function HeaderActions({ onSelectMenu }: { onSelectMenu: (type: "LUNCH" | "DINNER") => void }) {
   const [user, setUser] = useState<HeaderUser>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  function getCacheKey(email?: string | null) {
+    return email ? `saswatis-kitchen:header-user:${email.toLowerCase()}` : "";
+  }
+
+  function readCachedUser(email?: string | null): HeaderUser {
+    const cacheKey = getCacheKey(email);
+    if (!cacheKey || typeof window === "undefined") return null;
+
+    const cached = window.localStorage.getItem(cacheKey);
+    if (!cached) return null;
+
+    try {
+      const parsed = JSON.parse(cached) as CachedHeaderUser;
+      if (parsed.expiresAt < Date.now()) {
+        window.localStorage.removeItem(cacheKey);
+        return null;
+      }
+      return { email: parsed.email, role: parsed.role === "ADMIN" ? "ADMIN" : "USER" };
+    } catch {
+      window.localStorage.removeItem(cacheKey);
+      return null;
+    }
+  }
+
+  function writeCachedUser(nextUser: HeaderUser) {
+    const cacheKey = getCacheKey(nextUser?.email);
+    if (!cacheKey || typeof window === "undefined") return;
+
+    window.localStorage.setItem(
+      cacheKey,
+      JSON.stringify({
+        email: nextUser?.email,
+        role: nextUser?.role === "ADMIN" ? "ADMIN" : "USER",
+        expiresAt: Date.now() + HEADER_CACHE_TTL_MS
+      } satisfies CachedHeaderUser)
+    );
+  }
 
   async function loadUser(nextUser: { email?: string | null } | null) {
     if (!nextUser) {
@@ -25,9 +71,17 @@ export function HeaderActions({ onSelectMenu }: { onSelectMenu: (type: "LUNCH" |
       return;
     }
 
+    const cached = readCachedUser(nextUser.email);
+    if (cached) {
+      setUser(cached);
+      return;
+    }
+
     const response = await fetch("/api/account/session", { cache: "no-store" });
     const result = await response.json().catch(() => null);
-    setUser({ ...nextUser, role: result?.role === "ADMIN" ? "ADMIN" : "USER" });
+    const resolvedUser = { ...nextUser, role: result?.role === "ADMIN" ? "ADMIN" : "USER" } satisfies NonNullable<HeaderUser>;
+    setUser(resolvedUser);
+    writeCachedUser(resolvedUser);
   }
 
   useEffect(() => {

@@ -6,6 +6,14 @@ const requiredClientEnv = {
     "sb_publishable_pm0UNtRlsHPZJXlv-OMtpA_i7keLyx9"
 };
 
+const deliveryQuoteSecret =
+  process.env.DELIVERY_QUOTE_SECRET ??
+  process.env.DATABASE_URL ??
+  process.env.R2_SECRET_ACCESS_KEY ??
+  process.env.SMTP_PASS ??
+  process.env.TELEGRAM_BOT_TOKEN ??
+  "";
+
 export const env = {
   ...requiredClientEnv,
   databaseUrl: process.env.DATABASE_URL,
@@ -28,7 +36,10 @@ export const env = {
   smtpPort: Number(process.env.SMTP_PORT ?? "587"),
   smtpUser: process.env.SMTP_USER,
   smtpPass: process.env.SMTP_PASS,
-  smtpFrom: process.env.SMTP_FROM ?? "orders@saswatiskitchen.in"
+  smtpFrom: process.env.SMTP_FROM ?? "orders@saswatiskitchen.in",
+  geoapifyApiKey: process.env.GEOAPIFY_API_KEY,
+  googleMapsBrowserKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY,
+  deliveryQuoteSecret
 };
 
 export function isDatabaseConfigured() {

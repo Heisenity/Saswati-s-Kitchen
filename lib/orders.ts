@@ -1,6 +1,5 @@
 import { randomUUID } from "crypto";
 import { OrderStatus, PaymentStatus, type SlotType } from "@/lib/db-types";
-import { geocodeAddress } from "@/lib/geocode";
 import { isPrismaConnectionError, isPrismaSchemaMismatchError, prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { MAX_DELIVERY_DISTANCE_KM, calculateDeliveryCharge, haversineDistanceKm } from "@/lib/delivery";
@@ -19,6 +18,12 @@ export type CheckoutItemInput = {
 
 export type CreateOrderInput = {
   checkoutToken: string;
+  quoteId?: string;
+  quoteToken?: string;
+  manualDeliveryReviewRequired?: boolean;
+  deliveryChargeStatus?: "PENDING_ADMIN_REVIEW";
+  geocodeProvider?: string;
+  locationConfidence?: number;
   userId?: string;
   customerName: string;
   phone: string;
@@ -40,12 +45,14 @@ export function getAdvanceAmount(total: number) {
   return Math.ceil(total / 2);
 }
 
-async function resolveCustomerCoordinates(input: CreateOrderInput) {
+async function resolveCustomerCoordinates(
+  input: CreateOrderInput
+) {
   if (input.latitude && input.longitude) {
     return { latitude: input.latitude, longitude: input.longitude };
   }
 
-  return geocodeAddress([input.address, input.landmark].filter(Boolean).join(", "));
+  return null;
 }
 
 export async function createOrder(input: CreateOrderInput) {
@@ -68,27 +75,41 @@ export async function createOrder(input: CreateOrderInput) {
 
   const normalizedPhone = normalizePhone(input.phone);
   const subtotal = input.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-  const customerCoordinates = await resolveCustomerCoordinates(input);
-  if (!customerCoordinates) {
-    throw new Error("Please use Locate Me or enter a more complete delivery address.");
-  }
-
-  const distanceKm = haversineDistanceKm(
-    { lat: settings.kitchenLatitude, lng: settings.kitchenLongitude },
-    { lat: customerCoordinates.latitude, lng: customerCoordinates.longitude }
+  const manualDeliveryReviewRequired = Boolean(
+    input.manualDeliveryReviewRequired &&
+      !input.quoteId &&
+      !input.quoteToken &&
+      !(input.latitude && input.longitude)
   );
-  if (distanceKm > MAX_DELIVERY_DISTANCE_KM) {
-    throw new Error("We are coming soon to your location.");
+
+  let customerCoordinates: Awaited<ReturnType<typeof resolveCustomerCoordinates>> | null = null;
+  let distanceKm: number | null = null;
+  let deliveryCharge = 0;
+
+  if (!manualDeliveryReviewRequired) {
+    customerCoordinates = await resolveCustomerCoordinates(input);
+    if (!customerCoordinates) {
+      throw new Error("Please tap Locate Me for exact delivery charges or continue with your typed address.");
+    }
+
+    distanceKm = haversineDistanceKm(
+      { lat: settings.kitchenLatitude, lng: settings.kitchenLongitude },
+      { lat: customerCoordinates.latitude, lng: customerCoordinates.longitude }
+    );
+    if (distanceKm > MAX_DELIVERY_DISTANCE_KM) {
+      throw new Error("We are coming soon to your location.");
+    }
+
+    deliveryCharge = calculateDeliveryCharge({
+      subtotal,
+      distanceKm,
+      freeDeliveryOneKmMin: settings.freeDeliveryOneKmMin,
+      freeDeliveryTwoKmMin: settings.freeDeliveryTwoKmMin,
+      aboveTwoKmDeliveryCharge: settings.aboveTwoKmDeliveryCharge,
+      lowOrderDeliveryCharge: settings.lowOrderDeliveryCharge
+    });
   }
 
-  const deliveryCharge = calculateDeliveryCharge({
-    subtotal,
-    distanceKm,
-    freeDeliveryOneKmMin: settings.freeDeliveryOneKmMin,
-    freeDeliveryTwoKmMin: settings.freeDeliveryTwoKmMin,
-    aboveTwoKmDeliveryCharge: settings.aboveTwoKmDeliveryCharge,
-    lowOrderDeliveryCharge: settings.lowOrderDeliveryCharge
-  });
   const totalAmount = subtotal + deliveryCharge;
   const advanceAmount = getAdvanceAmount(totalAmount);
   const balanceAmount = totalAmount - advanceAmount;
@@ -103,8 +124,8 @@ export async function createOrder(input: CreateOrderInput) {
     phone: normalizedPhone,
     address: input.address,
     landmark: input.landmark,
-    latitude: customerCoordinates.latitude,
-    longitude: customerCoordinates.longitude,
+    latitude: customerCoordinates?.latitude ?? null,
+    longitude: customerCoordinates?.longitude ?? null,
     distanceKm,
     slotType: input.slotType,
     subtotal,
@@ -151,7 +172,9 @@ export async function createOrder(input: CreateOrderInput) {
     }
   }
 
-  await sendNewOrderNotification(order);
+  await sendNewOrderNotification(order, {
+    manualDeliveryReviewRequired
+  });
   if (input.paymentScreenshotUrl) {
     await sendPaymentProofNotification(order, input.paymentProofAnalysis);
   }

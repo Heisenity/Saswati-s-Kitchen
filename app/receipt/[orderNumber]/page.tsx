@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/env";
 import { normalizePhone } from "@/lib/phone";
 import { buildOrderWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
-import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { formatCurrency, formatDateTime, toDateValue } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -146,7 +146,7 @@ function formatReceiptDate(date: string | Date) {
     month: "2-digit",
     year: "numeric",
     timeZone: "Asia/Kolkata"
-  }).format(new Date(date));
+  }).format(toDateValue(date));
 }
 
 function formatReceiptTime(date: string | Date) {
@@ -155,5 +155,5 @@ function formatReceiptTime(date: string | Date) {
     minute: "2-digit",
     hour12: true,
     timeZone: "Asia/Kolkata"
-  }).format(new Date(date));
+  }).format(toDateValue(date));
 }

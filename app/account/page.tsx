@@ -54,7 +54,7 @@ export default async function AccountPage() {
             <Card className="p-8">
               <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">My orders</p>
               <h2 className="mt-3 font-serif text-3xl">Orders placed while signed in</h2>
-              <div className="mt-6 grid gap-4">
+              <div className="mt-6 max-h-[70vh] space-y-4 overflow-y-auto pr-1">
                 {orders.length ? (
                   orders.map((order) => (
                     <div key={order.id} className="rounded-3xl border border-border bg-muted p-5">
