@@ -39,10 +39,19 @@ type UploadedPaymentProof = {
   analysis: PaymentProofAnalysis;
 };
 
-const paymentProofTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
-const paymentProofMaxBytes = 8 * 1024 * 1024;
-const paymentProofUploadError =
-  "Payment screenshot upload failed. Please try again or use a JPG/PNG/WebP under 8 MB.";
+const paymentProofMaxBytes = 6 * 1024 * 1024;
+
+async function fileToDataUrl(file: File) {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return `data:${file.type || "application/octet-stream"};base64,${btoa(binary)}`;
+}
 
 export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
   const router = useRouter();
@@ -209,18 +218,14 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
 
   async function handlePaymentProofChange(nextFile: File | null) {
     setUploadedProof(null);
+    setSuccessNote("");
 
     if (!nextFile) {
       return;
     }
 
-    if (!paymentProofTypes.has(nextFile.type)) {
-      setError("Please upload a JPG, PNG, or WebP payment screenshot.");
-      return;
-    }
-
     if (nextFile.size <= 0 || nextFile.size > paymentProofMaxBytes) {
-      setError("Payment screenshot must be smaller than 8 MB.");
+      setError("Attachment must be smaller than 6 MB.");
       return;
     }
 
@@ -243,14 +248,31 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
       try {
         uploadResult = JSON.parse(responseText);
       } catch {
-        throw new Error(paymentProofUploadError);
+        uploadResult = { ok: false };
       }
 
-      if (!uploadResponse.ok || !uploadResult.ok) {
-        throw new Error(uploadResult.error ?? paymentProofUploadError);
-      }
+      if (!uploadResponse.ok || !uploadResult.ok || !uploadResult.url || !uploadResult.analysis) {
+        const fallbackUrl = await fileToDataUrl(nextFile);
+        const fallbackAnalysis: PaymentProofAnalysis = {
+          verdict: "NEEDS_MANUAL_REVIEW",
+          confidence: 0.5,
+          summary: "Attachment received",
+          reasons: ["Stored directly with the order because upload service was unavailable."],
+          mimeType: nextFile.type || "application/octet-stream",
+          fileSizeKb: Math.round((nextFile.size / 1024) * 10) / 10
+        };
 
-      if (!uploadResult.url || !uploadResult.analysis) throw new Error(paymentProofUploadError);
+        if (latestUploadRequest.current !== uploadRequestId) {
+          return;
+        }
+
+        setUploadedProof({
+          url: fallbackUrl,
+          analysis: fallbackAnalysis,
+          fileName: nextFile.name
+        });
+        return;
+      }
 
       if (latestUploadRequest.current !== uploadRequestId) {
         return;
@@ -263,12 +285,24 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
       });
     } catch (uploadError) {
       if (latestUploadRequest.current === uploadRequestId) {
-        setUploadedProof(null);
-        setError(
-          uploadError instanceof Error
-            ? uploadError.message
-            : "Could not upload payment screenshot."
-        );
+        try {
+          const fallbackUrl = await fileToDataUrl(nextFile);
+          setUploadedProof({
+            url: fallbackUrl,
+            analysis: {
+              verdict: "NEEDS_MANUAL_REVIEW",
+              confidence: 0.5,
+              summary: "Attachment received",
+              reasons: ["Stored directly with the order because upload service was unavailable."],
+              mimeType: nextFile.type || "application/octet-stream",
+              fileSizeKb: Math.round((nextFile.size / 1024) * 10) / 10
+            },
+            fileName: nextFile.name
+          });
+        } catch {
+          setUploadedProof(null);
+          setError(uploadError instanceof Error ? uploadError.message : "Could not prepare attachment.");
+        }
       }
     } finally {
       if (latestUploadRequest.current === uploadRequestId) {
@@ -440,7 +474,6 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
                   <div className="mt-5 space-y-4">
                     <input
                       type="file"
-                      accept="image/png,image/jpeg,image/webp"
                       className="block w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm"
                       onChange={(event) => handlePaymentProofChange(event.target.files?.[0] ?? null)}
                       required

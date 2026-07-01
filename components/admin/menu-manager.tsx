@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,7 @@ function createEmptyForm(mealType: MenuRow["mealType"] = "LUNCH"): MenuForm {
 }
 
 export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
+  const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [form, setForm] = useState(createEmptyForm());
@@ -165,6 +167,7 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
         ? current.map((row) => (row.id === savedItem.id ? savedItem : row))
         : [savedItem, ...current]
     );
+    router.refresh();
     setForm(createEmptyForm(viewMealType));
     setEditingId(null);
     setMessage(editingId ? "Menu item updated." : "Menu item added.");
@@ -186,6 +189,7 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
 
     const updatedItem = result.item;
     syncItems((current) => current.map((row) => (row.id === item.id ? updatedItem : row)));
+    router.refresh();
   }
 
   function startEditing(item: MenuRow) {
@@ -229,6 +233,7 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
     }
 
     syncItems((current) => current.filter((row) => row.id !== item.id));
+    router.refresh();
     if (editingId === item.id) resetForm();
     setMessage("Menu item deleted.");
   }
@@ -270,6 +275,7 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
     }
 
     syncItems(result.items);
+    router.refresh();
     setBulkComponent("");
     setMessage(
       bulkAction === "add_component"

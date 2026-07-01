@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
 import { requireStrictAdminApiSession, AdminApiAuthError } from "@/lib/auth";
 import { isDatabaseConfigured } from "@/lib/env";
@@ -27,6 +28,12 @@ function handleAdminError(error: unknown) {
 
   console.error(error);
   return rejectJson(500, "Could not complete this admin action.");
+}
+
+function refreshMenuViews() {
+  revalidatePath("/");
+  revalidatePath("/checkout");
+  revalidatePath("/admin/menu");
 }
 
 export async function GET() {
@@ -84,6 +91,7 @@ export async function POST(request: Request) {
       targetId: item.id,
       metadata: { name: item.name }
     });
+    refreshMenuViews();
 
     return NextResponse.json({ ok: true, item });
   } catch (error) {
@@ -140,6 +148,7 @@ export async function PUT(request: Request) {
       targetId: item.id,
       metadata: { name: item.name }
     });
+    refreshMenuViews();
 
     return NextResponse.json({ ok: true, item });
   } catch (error) {
@@ -211,6 +220,7 @@ export async function PATCH(request: Request) {
         component: componentName
       }
     });
+    refreshMenuViews();
 
     return NextResponse.json({ ok: true, items });
   } catch (error) {
@@ -239,6 +249,7 @@ export async function DELETE(request: Request) {
       targetId: id,
       metadata: { name: item.name }
     });
+    refreshMenuViews();
 
     return NextResponse.json({ ok: true });
   } catch (error) {

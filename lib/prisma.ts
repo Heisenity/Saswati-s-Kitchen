@@ -236,6 +236,10 @@ function mapSetting(row: SettingRow | null) {
   };
 }
 
+function createOrderedComponentId(index: number) {
+  return `${String(index).padStart(4, "0")}-${randomUUID()}`;
+}
+
 async function loadOrderItems(orderIds: string[], client?: DbClient) {
   if (!orderIds.length) return new Map<string, OrderItemRow[]>();
 
@@ -636,13 +640,13 @@ export const prisma = {
           client
         );
 
-        for (const component of data.components?.create ?? []) {
+        for (const [index, component] of (data.components?.create ?? []).entries()) {
           await query(
             `
               insert into "MenuItemComponent" (id, "menuItemId", "itemName")
               values ($1, $2, $3)
             `,
-            [randomUUID(), id, component.itemName],
+            [createOrderedComponentId(index), id, component.itemName],
             client
           );
         }
@@ -689,13 +693,13 @@ export const prisma = {
           );
         }
 
-        for (const component of data.components?.create ?? []) {
+        for (const [index, component] of (data.components?.create ?? []).entries()) {
           await query(
             `
               insert into "MenuItemComponent" (id, "menuItemId", "itemName")
               values ($1, $2, $3)
             `,
-            [randomUUID(), args.where.id, component.itemName],
+            [createOrderedComponentId(index), args.where.id, component.itemName],
             client
           );
         }

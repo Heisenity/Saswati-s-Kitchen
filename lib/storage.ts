@@ -3,9 +3,7 @@ import { env } from "@/lib/env";
 import { buildStorageObjectKey, validateUploadFile } from "@/lib/security";
 
 export const paymentProofUploadOptions = {
-  allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
-  allowedExtensions: ["jpg", "jpeg", "png", "webp"],
-  maxBytes: 8 * 1024 * 1024
+  maxBytes: 6 * 1024 * 1024
 };
 
 function sanitizeUploadName(fileName: string) {
@@ -139,7 +137,9 @@ async function uploadFileToR2(
 }
 
 export async function uploadPaymentProof(file: File) {
-  await validateUploadFile(file, paymentProofUploadOptions);
+  if (file.size <= 0 || file.size > paymentProofUploadOptions.maxBytes) {
+    throw new Error("Attachment must be smaller than 6 MB.");
+  }
 
   try {
     return await uploadFileToR2(file, "payment-proofs");
