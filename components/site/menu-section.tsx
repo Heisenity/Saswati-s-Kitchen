@@ -142,8 +142,15 @@ function MenuCard({
   item: MenuSectionProps["items"][number];
   onAuthRequired: (next: string) => void;
 }) {
-  const { addItem, replaceWithSingleItem } = useCart();
-  const [quantity, setQuantity] = useState(0);
+  const { items, addItem, replaceWithSingleItem, updateQuantity } = useCart();
+  const quantity = items.find((entry) => entry.id === item.id)?.quantity ?? 0;
+  const cartItem = {
+    id: item.id,
+    name: item.name,
+    price: item.price,
+    imageUrl: item.imageUrl,
+    badge: item.badge
+  };
 
   async function requireAuth(next: string) {
     const supabase = createClient();
@@ -191,8 +198,9 @@ function MenuCard({
               className="rounded-full px-3 py-2"
               onClick={(event) => {
                 event.stopPropagation();
-                setQuantity(Math.max(0, quantity - 1));
+                if (quantity > 0) updateQuantity(item.id, quantity - 1);
               }}
+              disabled={quantity === 0}
             >
               -
             </button>
@@ -202,7 +210,12 @@ function MenuCard({
               className="rounded-full px-3 py-2"
               onClick={(event) => {
                 event.stopPropagation();
-                setQuantity(quantity + 1);
+                if (quantity === 0) {
+                  addItem(cartItem, 1);
+                  return;
+                }
+
+                updateQuantity(item.id, quantity + 1);
               }}
             >
               +
@@ -213,19 +226,9 @@ function MenuCard({
               size="sm"
               className="w-full transition-transform duration-200 hover:-translate-y-0.5 sm:w-auto sm:min-w-[118px]"
               variant="outline"
-              disabled={quantity === 0}
               onClick={async (event) => {
                 event.stopPropagation();
-                addItem(
-                  {
-                    id: item.id,
-                    name: item.name,
-                    price: item.price,
-                    imageUrl: item.imageUrl,
-                    badge: item.badge
-                  },
-                  quantity
-                );
+                addItem(cartItem, 1);
                 if (!(await requireAuth("/"))) return;
               }}
             >
@@ -235,19 +238,9 @@ function MenuCard({
             <Button
               size="sm"
               className="w-full transition-transform duration-200 hover:-translate-y-0.5 sm:w-auto sm:min-w-[108px]"
-              disabled={quantity === 0}
               onClick={async (event) => {
                 event.stopPropagation();
-                replaceWithSingleItem(
-                  {
-                    id: item.id,
-                    name: item.name,
-                    price: item.price,
-                    imageUrl: item.imageUrl,
-                    badge: item.badge
-                  },
-                  quantity
-                );
+                replaceWithSingleItem(cartItem, Math.max(quantity, 1));
                 if (!(await requireAuth("/checkout"))) return;
                 window.location.href = "/checkout";
               }}

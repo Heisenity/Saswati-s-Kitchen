@@ -70,7 +70,12 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
   const [successNote, setSuccessNote] = useState("");
   const [confirmationOrderNumber, setConfirmationOrderNumber] = useState<string | null>(null);
   const [addressLookupLoading, setAddressLookupLoading] = useState(false);
+  const [resolvedAddressQuery, setResolvedAddressQuery] = useState("");
   const latestUploadRequest = useRef(0);
+  const addressQuery = useMemo(
+    () => [address.trim(), landmark.trim()].filter(Boolean).join(", "),
+    [address, landmark]
+  );
   const hasLocation =
     Number.isFinite(location.latitude) && Number.isFinite(location.longitude);
 
@@ -132,6 +137,7 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
           ...bestMatch,
           source: "gps"
         });
+        setResolvedAddressQuery("");
         return;
       }
 
@@ -174,37 +180,15 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
   }
 
   useEffect(() => {
-    const query = [address.trim(), landmark.trim()].filter(Boolean).join(", ");
-    if (query.length < 12) {
-      if (location.source === "address") {
-        setLocation({});
-      }
-      return;
+    if (
+      location.source === "address" &&
+      resolvedAddressQuery &&
+      addressQuery !== resolvedAddressQuery
+    ) {
+      setLocation({});
+      setResolvedAddressQuery("");
     }
-
-    const timeout = window.setTimeout(async () => {
-      setAddressLookupLoading(true);
-      try {
-        const response = await fetch("/api/geocode", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ address, landmark })
-        });
-        const result = await response.json();
-        if (result.ok) {
-          setLocation({
-            latitude: result.latitude,
-            longitude: result.longitude,
-            source: "address"
-          });
-        }
-      } finally {
-        setAddressLookupLoading(false);
-      }
-    }, 700);
-
-    return () => window.clearTimeout(timeout);
-  }, [address, landmark, location.source]);
+  }, [addressQuery, location.source, resolvedAddressQuery]);
 
   useEffect(() => {
     if (!confirmationOrderNumber) return;
@@ -215,6 +199,46 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
 
     return () => window.clearTimeout(timeout);
   }, [confirmationOrderNumber, router]);
+
+  async function resolveAddressLocation() {
+    if (addressQuery.length < 12) {
+      setError("Enter a more complete delivery address, then tap Use this address.");
+      return;
+    }
+
+    setAddressLookupLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/geocode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address, landmark })
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error ?? "We could not match this address yet.");
+      }
+
+      setLocation({
+        latitude: result.latitude,
+        longitude: result.longitude,
+        source: "address"
+      });
+      setResolvedAddressQuery(addressQuery);
+    } catch (lookupError) {
+      setLocation({});
+      setResolvedAddressQuery("");
+      setError(
+        lookupError instanceof Error
+          ? lookupError.message
+          : "We could not match this address yet."
+      );
+    } finally {
+      setAddressLookupLoading(false);
+    }
+  }
 
   async function handlePaymentProofChange(nextFile: File | null) {
     setUploadedProof(null);
@@ -412,6 +436,23 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
             </div>
             <div className="mt-4">
               <Textarea placeholder="Full address" value={address} onChange={(event) => setAddress(event.target.value)} required />
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={resolveAddressLocation}
+                  disabled={addressLookupLoading || locating}
+                >
+                  {addressLookupLoading ? (
+                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  {addressLookupLoading ? "Checking address..." : "Use this address"}
+                </Button>
+                <span className="text-xs text-stone-500">
+                  No GPS? Type the full address and tap this button to calculate delivery.
+                </span>
+              </div>
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <Button type="button" variant="outline" onClick={detectLocation} disabled={locating}>
@@ -435,7 +476,7 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
               ) : null}
               {!hasLocation && !addressLookupLoading && !locating ? (
                 <span className="text-xs text-stone-500">
-                  Tap Locate Me or enter your full address to calculate the exact delivery fee.
+                  Tap Locate Me or use your typed address to calculate the exact delivery fee.
                 </span>
               ) : null}
               {outOfRange ? (
