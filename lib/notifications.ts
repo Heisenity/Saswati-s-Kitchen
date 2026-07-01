@@ -18,7 +18,7 @@ type OrderLike = {
   latitude?: number | null;
   longitude?: number | null;
   paymentScreenshotUrl?: string | null;
-  items?: Array<{ itemName: string; quantity: number }>;
+  items?: Array<{ itemName: string; quantity: number; unitPrice?: number; totalPrice?: number }>;
 };
 
 function canSendMail() {
@@ -47,6 +47,11 @@ async function sendTelegramMessage(message: string) {
 function buildLocationLine(order: OrderLike) {
   if (!order.latitude || !order.longitude) return null;
   return `Location: https://maps.google.com/?q=${order.latitude},${order.longitude}`;
+}
+
+function buildScreenshotLine(url?: string | null) {
+  if (!url) return "Payment proof: Not submitted";
+  return "Payment proof: Attached separately";
 }
 
 async function getAttachmentFile(url: string, orderNumber: string) {
@@ -125,7 +130,16 @@ export async function sendNewOrderNotification(
   const manualDeliveryReviewRequired =
     Boolean(options?.manualDeliveryReviewRequired) || order.distanceKm == null;
   const items =
-    order.items?.map((item) => `- ${item.itemName} x${item.quantity}`).join("\n") ?? "Not available";
+    order.items?.map((item) => {
+      const lineTotal =
+        typeof item.totalPrice === "number"
+          ? item.totalPrice
+          : typeof item.unitPrice === "number"
+            ? item.unitPrice * item.quantity
+            : null;
+
+      return `- ${item.itemName} x${item.quantity}${lineTotal != null ? ` = ₹${lineTotal}` : ""}`;
+    }).join("\n") ?? "Not available";
   const locationLine = buildLocationLine(order);
   const message = [
     manualDeliveryReviewRequired ? "🚨 Manual delivery review required" : "New order placed",
@@ -140,14 +154,14 @@ export async function sendNewOrderNotification(
     items,
     `Food subtotal: ₹${order.subtotal}`,
     manualDeliveryReviewRequired ? "Delivery charge: Pending admin confirmation" : `Delivery: ₹${order.deliveryCharge}`,
-    `Total: ₹${order.totalAmount}`,
+    `Grand total: ₹${order.totalAmount}`,
     `Advance paid/payable: ₹${order.advanceAmount}`,
     `Balance amount: ₹${order.balanceAmount}`,
     manualDeliveryReviewRequired
       ? "Distance: Pending manual review"
       : `Distance: ${order.distanceKm?.toFixed(2) ?? "0"} km`,
     locationLine,
-    `Screenshot: ${order.paymentScreenshotUrl ?? "Not submitted"}`
+    buildScreenshotLine(order.paymentScreenshotUrl)
   ]
     .filter(Boolean)
     .join("\n");
@@ -171,7 +185,7 @@ export async function sendPaymentProofNotification(
     `Address: ${order.address}`,
     locationLine,
     `Proof check: ${formatPaymentProofAnalysis(analysis)}`,
-    `Screenshot: ${order.paymentScreenshotUrl ?? "Not submitted"}`
+    buildScreenshotLine(order.paymentScreenshotUrl)
   ]
     .filter(Boolean)
     .join("\n");
