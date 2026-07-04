@@ -35,7 +35,9 @@ export function MenuSection({ items }: MenuSectionProps) {
   const [authNext, setAuthNext] = useState("/");
   const [authOpen, setAuthOpen] = useState(false);
   const [mealType, setMealType] = useState<VisibleMealType>("LUNCH");
-  const thalis = items.filter((item) => item.itemKind === "THALI" && item.mealType === mealType);
+  const thalis = items
+    .filter((item) => item.itemKind === "THALI" && item.mealType === mealType)
+    .sort((a, b) => Number(b.badge.includes("Combo Offer")) - Number(a.badge.includes("Combo Offer")));
   const addOns = items.filter((item) => item.itemKind === "ADD_ON" && item.mealType === mealType);
 
   useEffect(() => {
@@ -144,6 +146,7 @@ function MenuCard({
 }) {
   const { items, addItem, replaceWithSingleItem, updateQuantity } = useCart();
   const quantity = items.find((entry) => entry.id === item.id)?.quantity ?? 0;
+  const isCombo = item.badge.includes("Combo Offer");
   const cartItem = {
     id: item.id,
     name: item.name,
@@ -165,7 +168,7 @@ function MenuCard({
 
   return (
     <div className="w-full min-w-0 max-w-full">
-      <Card className="w-full min-w-0 max-w-full overflow-hidden p-4">
+      <Card className={`w-full min-w-0 max-w-full overflow-hidden p-4 ${isCombo ? "border-[#d08b2f] bg-gradient-to-b from-[#fffaf0] to-white shadow-[0_18px_45px_rgba(184,59,47,0.12)]" : ""}`}>
         <Image
           src={item.imageUrl}
           alt={item.name}
@@ -184,6 +187,7 @@ function MenuCard({
           <p className="break-words text-lg font-semibold text-primary sm:shrink-0">{formatCurrency(item.price)}</p>
         </div>
         <p className="mt-3 break-words text-sm leading-7 text-stone-600">{item.description}</p>
+        {isCombo ? <p className="mt-2 text-sm font-semibold text-primary">Limited Sunday preparation—reserve yours early.</p> : null}
         <ul className="mt-4 grid gap-2 text-sm text-stone-700">
           {item.components.map((component) => (
             <li key={component.itemName} className="max-w-full break-words rounded-2xl bg-muted px-3 py-2">

@@ -9,6 +9,30 @@ export const defaultKitchenCoordinates = {
 
 export const defaultMenuItems: MenuSeed[] = [
   {
+    name: "Mutton Combo",
+    slug: "sunday-mutton-combo",
+    description: "Sunday’s premium favourite—festive fried rice and rich mutton kosha with a sweet finish.",
+    price: 299,
+    badge: "Sunday Combo Offer",
+    imageUrl: "/brand/sunday-mutton-combo.jpg",
+    mealType: "LUNCH",
+    itemKind: "THALI",
+    stockLimit: 20,
+    components: ["Fried rice", "Mutton kosha", "Chutney/sweet aachar", "Papad", "Salad", "Roshogolla"]
+  },
+  {
+    name: "Chicken Combo",
+    slug: "sunday-chicken-combo",
+    description: "A complete Sunday comfort combo with fried rice, chicken kosha and roshogolla—big value in one plate.",
+    price: 179,
+    badge: "Sunday Combo Offer",
+    imageUrl: "/brand/sunday-chicken-combo.jpg",
+    mealType: "LUNCH",
+    itemKind: "THALI",
+    stockLimit: 25,
+    components: ["Fried rice", "Chicken kosha", "Chutney/sweet aachar", "Papad", "Salad", "Roshogolla"]
+  },
+  {
     name: "Mutton Thali",
     slug: "mutton-thali",
     description: "Rich Bengali mutton kosha for a special lunch.",
@@ -103,6 +127,30 @@ export const defaultMenuItems: MenuSeed[] = [
     itemKind: "THALI",
     stockLimit: 26,
     components: ["Rice", "Moosor daal", "Aloo potol kosha", "Dhokar dalna / Paneer Curry", "Chutney/aachar", "Papad", "Salad"]
+  },
+  {
+    name: "Mutton Combo",
+    slug: "dinner-sunday-mutton-combo",
+    description: "Sunday’s premium favourite—festive fried rice and rich mutton kosha with a sweet finish.",
+    price: 299,
+    badge: "Sunday Combo Offer",
+    imageUrl: "/brand/sunday-mutton-combo.jpg",
+    mealType: "DINNER",
+    itemKind: "THALI",
+    stockLimit: 20,
+    components: ["Fried rice", "Mutton kosha", "Chutney/sweet aachar", "Papad", "Salad", "Roshogolla"]
+  },
+  {
+    name: "Chicken Combo",
+    slug: "dinner-sunday-chicken-combo",
+    description: "A complete Sunday comfort combo with fried rice, chicken kosha and roshogolla—big value in one plate.",
+    price: 179,
+    badge: "Sunday Combo Offer",
+    imageUrl: "/brand/sunday-chicken-combo.jpg",
+    mealType: "DINNER",
+    itemKind: "THALI",
+    stockLimit: 25,
+    components: ["Fried rice", "Chicken kosha", "Chutney/sweet aachar", "Papad", "Salad", "Roshogolla"]
   },
   {
     name: "Chicken Thali",

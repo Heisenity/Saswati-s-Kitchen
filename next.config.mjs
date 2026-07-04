@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const isDev = process.env.NODE_ENV === "development";
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:4001";
+const appUrl =
+  process.env.NEXT_PUBLIC_APP_URL ?? process.env.URL ?? "http://localhost:4001";
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://ovmvmjgutbdtkxnzkvpb.supabase.co";
 const r2PublicUrl = process.env.R2_PUBLIC_URL ?? "https://pub-9d2bed8b98a0462bb1d4d2a1d7f9fcd6.r2.dev";
@@ -19,6 +20,7 @@ const connectSources = [
   getOrigin(appUrl),
   getOrigin(supabaseUrl),
   getOrigin(r2PublicUrl),
+  "https://*.r2.cloudflarestorage.com",
   "https://*.supabase.co",
   "wss://*.supabase.co",
   appUrl.startsWith("https://")

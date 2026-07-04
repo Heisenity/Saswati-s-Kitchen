@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { isWhitelistedAdminEmail, isDatabaseConfigured } from "@/lib/env";
 import { isPrismaConnectionError, prisma } from "@/lib/prisma";
 import { logDeniedAdminLogin } from "@/lib/security";
@@ -6,12 +7,18 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  const cookieStore = await cookies();
   const code = url.searchParams.get("code");
-  const next = url.searchParams.get("next") ?? "/";
-  const mode = url.searchParams.get("mode") === "admin" ? "admin" : "user";
+  const storedMode = cookieStore.get("sk_oauth_mode")?.value;
+  const mode =
+    url.searchParams.get("mode") === "admin" || storedMode === "admin" ? "admin" : "user";
+  const requestedNext =
+    url.searchParams.get("next") ?? cookieStore.get("sk_oauth_next")?.value ?? "/";
+  const validNext = requestedNext.startsWith("/") && !requestedNext.startsWith("//");
+  const next = mode === "admin" ? "/admin/dashboard" : validNext ? requestedNext : "/";
   const loginPath = mode === "admin" ? "/admin/login" : "/login";
 
-  if (!code || !next.startsWith("/")) {
+  if (!code || !validNext) {
     return NextResponse.redirect(new URL(`${loginPath}?error=oauth_callback_failed`, url.origin));
   }
 
@@ -78,12 +85,21 @@ export async function GET(request: Request) {
   const isLocalEnv = process.env.NODE_ENV === "development";
 
   if (isLocalEnv) {
-    return NextResponse.redirect(new URL(next, url.origin));
+    const response = NextResponse.redirect(new URL(next, url.origin));
+    response.cookies.delete("sk_oauth_mode");
+    response.cookies.delete("sk_oauth_next");
+    return response;
   }
 
   if (forwardedHost) {
-    return NextResponse.redirect(`https://${forwardedHost}${next}`);
+    const response = NextResponse.redirect(`https://${forwardedHost}${next}`);
+    response.cookies.delete("sk_oauth_mode");
+    response.cookies.delete("sk_oauth_next");
+    return response;
   }
 
-  return NextResponse.redirect(new URL(next, url.origin));
+  const response = NextResponse.redirect(new URL(next, url.origin));
+  response.cookies.delete("sk_oauth_mode");
+  response.cookies.delete("sk_oauth_next");
+  return response;
 }

@@ -301,7 +301,9 @@ export function CheckoutPage({ settings, slotState, recommendations }: CheckoutP
         headers: { "Content-Type": preparedFile.type },
         body: preparedFile
       });
-      if (!r2Response.ok) throw new Error("Could not upload payment screenshot.");
+      if (!r2Response.ok) {
+        throw new Error("Could not upload payment screenshot. Please try once more.");
+      }
 
       if (latestUploadRequest.current !== uploadRequestId) {
         return;
@@ -313,9 +315,16 @@ export function CheckoutPage({ settings, slotState, recommendations }: CheckoutP
         fileName: nextFile.name
       });
     } catch (uploadError) {
+      console.error("[payment-proof:browser-upload-failed]", uploadError);
       if (latestUploadRequest.current === uploadRequestId) {
         setUploadedProof(null);
-        setError(uploadError instanceof Error ? uploadError.message : "Could not upload payment screenshot.");
+        setError(
+          uploadError instanceof TypeError
+            ? "Could not connect to secure image storage. Please refresh and try again."
+            : uploadError instanceof Error
+              ? uploadError.message
+              : "Could not upload payment screenshot."
+        );
       }
     } finally {
       if (latestUploadRequest.current === uploadRequestId) {

@@ -15,15 +15,17 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const provider = url.searchParams.get("provider") ?? "";
-  const next = url.searchParams.get("next") ?? "/";
   const mode = url.searchParams.get("mode") === "admin" ? "admin" : "user";
+  const requestedNext = url.searchParams.get("next") ?? "/";
+  const validNext = requestedNext.startsWith("/") && !requestedNext.startsWith("//");
+  const next = mode === "admin" ? "/admin/dashboard" : validNext ? requestedNext : "/";
   const loginPath = mode === "admin" ? "/admin/login" : "/login";
 
   if (!isSupabaseAuthConfigured()) {
     return NextResponse.redirect(new URL(`${loginPath}?error=supabase_not_configured`, url.origin));
   }
 
-  if (!providers.has(provider) || !next.startsWith("/")) {
+  if (!providers.has(provider) || !validNext) {
     return NextResponse.redirect(new URL(`${loginPath}?error=invalid_oauth_request`, url.origin));
   }
 
@@ -43,5 +45,15 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(`${loginPath}?error=oauth_start_failed`, url.origin));
   }
 
-  return NextResponse.redirect(data.url);
+  const response = NextResponse.redirect(data.url);
+  const cookieOptions = {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 10 * 60
+  };
+  response.cookies.set("sk_oauth_mode", mode, cookieOptions);
+  response.cookies.set("sk_oauth_next", next, cookieOptions);
+  return response;
 }

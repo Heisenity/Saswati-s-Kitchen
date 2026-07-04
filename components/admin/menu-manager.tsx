@@ -313,8 +313,13 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
 
       setForm((current) => ({ ...current, imageUrl: result.url as string }));
       setMessage("Image uploaded. Save the menu item to keep it.");
-    } catch {
-      setMessage("Image upload failed. Please try again.");
+    } catch (error) {
+      console.error("[menu-image:browser-upload-failed]", error);
+      setMessage(
+        error instanceof TypeError
+          ? "Could not connect to secure image storage. Refresh and try again."
+          : "Image upload failed. Please try again."
+      );
     } finally {
       setUploadingImage(false);
     }

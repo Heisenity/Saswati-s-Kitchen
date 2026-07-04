@@ -51,6 +51,8 @@ insert into "MenuItem" (
   "isActive", "stockLimit", "createdAt", "updatedAt"
 )
 values
+  ('sunday-mutton-combo', 'Mutton Combo', 'sunday-mutton-combo', 'Sunday’s premium favourite—festive fried rice and rich mutton kosha with a sweet finish.', 299, '/brand/sunday-mutton-combo.jpg', 'LUNCH', 'THALI', 'Sunday Combo Offer', true, 20, now(), now()),
+  ('sunday-chicken-combo', 'Chicken Combo', 'sunday-chicken-combo', 'A complete Sunday comfort combo with fried rice, chicken kosha and roshogolla—big value in one plate.', 179, '/brand/sunday-chicken-combo.jpg', 'LUNCH', 'THALI', 'Sunday Combo Offer', true, 25, now(), now()),
   ('mutton-thali', 'Mutton Thali', 'mutton-thali', 'Rich Bengali mutton kosha for a special lunch.', 249, '/brand/mutton-thali.jpg', 'LUNCH', 'THALI', 'Premium', true, 18, now(), now()),
   ('chingri-thali', 'Chingri Thali', 'chingri-thali', 'Light, flavorful and comforting prawn meal.', 159, '/brand/chingri-thali.jpg', 'LUNCH', 'THALI', 'Chef''s Pick', true, 20, now(), now()),
   ('pabda-thali', 'Pabda Thali', 'pabda-thali', 'Authentic Bengali sorshe pabda taste.', 159, '/brand/pabda-thali.jpg', 'LUNCH', 'THALI', 'Traditional Favorite', true, 16, now(), now()),
@@ -73,6 +75,8 @@ on conflict (slug) do update set
 
 delete from "MenuItemComponent"
 where "menuItemId" in (
+  'sunday-mutton-combo',
+  'sunday-chicken-combo',
   'mutton-thali',
   'chingri-thali',
   'pabda-thali',
@@ -85,6 +89,18 @@ where "menuItemId" in (
 
 insert into "MenuItemComponent" (id, "menuItemId", "itemName")
 values
+  ('sunday-mutton-combo-1', 'sunday-mutton-combo', 'Fried rice'),
+  ('sunday-mutton-combo-2', 'sunday-mutton-combo', 'Mutton kosha'),
+  ('sunday-mutton-combo-3', 'sunday-mutton-combo', 'Chutney/sweet aachar'),
+  ('sunday-mutton-combo-4', 'sunday-mutton-combo', 'Papad'),
+  ('sunday-mutton-combo-5', 'sunday-mutton-combo', 'Salad'),
+  ('sunday-mutton-combo-6', 'sunday-mutton-combo', 'Roshogolla'),
+  ('sunday-chicken-combo-1', 'sunday-chicken-combo', 'Fried rice'),
+  ('sunday-chicken-combo-2', 'sunday-chicken-combo', 'Chicken kosha'),
+  ('sunday-chicken-combo-3', 'sunday-chicken-combo', 'Chutney/sweet aachar'),
+  ('sunday-chicken-combo-4', 'sunday-chicken-combo', 'Papad'),
+  ('sunday-chicken-combo-5', 'sunday-chicken-combo', 'Salad'),
+  ('sunday-chicken-combo-6', 'sunday-chicken-combo', 'Roshogolla'),
   ('mutton-thali-1', 'mutton-thali', 'Rice'),
   ('mutton-thali-2', 'mutton-thali', 'Moosor daal'),
   ('mutton-thali-3', 'mutton-thali', 'Aloo potol kosha'),
@@ -147,6 +163,8 @@ insert into "MenuItem" (
   "isActive", "stockLimit", "createdAt", "updatedAt"
 )
 values
+  ('dinner-sunday-mutton-combo', 'Mutton Combo', 'dinner-sunday-mutton-combo', 'Sunday’s premium favourite—festive fried rice and rich mutton kosha with a sweet finish.', 299, '/brand/sunday-mutton-combo.jpg', 'DINNER', 'THALI', 'Sunday Combo Offer', true, 20, now(), now()),
+  ('dinner-sunday-chicken-combo', 'Chicken Combo', 'dinner-sunday-chicken-combo', 'A complete Sunday comfort combo with fried rice, chicken kosha and roshogolla—big value in one plate.', 179, '/brand/sunday-chicken-combo.jpg', 'DINNER', 'THALI', 'Sunday Combo Offer', true, 25, now(), now()),
   ('dinner-chicken-thali', 'Chicken Thali', 'dinner-chicken-thali', 'Homestyle chicken curry with a comforting Bengali dinner spread.', 149, '/brand/chicken-thali.jpg', 'DINNER', 'THALI', 'Dinner Favourite', true, 24, now(), now()),
   ('dinner-katlaa-macher-thali', 'Katlaa Macher Thali', 'dinner-katlaa-macher-thali', 'Classic Katla curry served with a fresh Bengali dinner spread.', 139, '/brand/katlaa-thali.jpg', 'DINNER', 'THALI', 'Bengali Classic', true, 22, now(), now()),
   ('dinner-egg-thali', 'Egg Thali', 'dinner-egg-thali', 'Simple egg curry and Bengali sides for a filling dinner.', 99, '/brand/egg-thali.jpg', 'DINNER', 'THALI', 'Budget Favourite', true, 25, now(), now()),
@@ -173,6 +191,8 @@ on conflict (slug) do update set
 
 delete from "MenuItemComponent"
 where "menuItemId" in (
+  'dinner-sunday-mutton-combo',
+  'dinner-sunday-chicken-combo',
   'dinner-chicken-thali',
   'dinner-katlaa-macher-thali',
   'dinner-egg-thali',
@@ -189,6 +209,18 @@ where "menuItemId" in (
 
 insert into "MenuItemComponent" (id, "menuItemId", "itemName")
 values
+  ('dinner-sunday-mutton-combo-1', 'dinner-sunday-mutton-combo', 'Fried rice'),
+  ('dinner-sunday-mutton-combo-2', 'dinner-sunday-mutton-combo', 'Mutton kosha'),
+  ('dinner-sunday-mutton-combo-3', 'dinner-sunday-mutton-combo', 'Chutney/sweet aachar'),
+  ('dinner-sunday-mutton-combo-4', 'dinner-sunday-mutton-combo', 'Papad'),
+  ('dinner-sunday-mutton-combo-5', 'dinner-sunday-mutton-combo', 'Salad'),
+  ('dinner-sunday-mutton-combo-6', 'dinner-sunday-mutton-combo', 'Roshogolla'),
+  ('dinner-sunday-chicken-combo-1', 'dinner-sunday-chicken-combo', 'Fried rice'),
+  ('dinner-sunday-chicken-combo-2', 'dinner-sunday-chicken-combo', 'Chicken kosha'),
+  ('dinner-sunday-chicken-combo-3', 'dinner-sunday-chicken-combo', 'Chutney/sweet aachar'),
+  ('dinner-sunday-chicken-combo-4', 'dinner-sunday-chicken-combo', 'Papad'),
+  ('dinner-sunday-chicken-combo-5', 'dinner-sunday-chicken-combo', 'Salad'),
+  ('dinner-sunday-chicken-combo-6', 'dinner-sunday-chicken-combo', 'Roshogolla'),
   ('dinner-chicken-thali-1', 'dinner-chicken-thali', 'Rice'),
   ('dinner-chicken-thali-2', 'dinner-chicken-thali', 'Moosor daal'),
   ('dinner-chicken-thali-3', 'dinner-chicken-thali', 'Mochar Ghanto (Banana Flower)'),
