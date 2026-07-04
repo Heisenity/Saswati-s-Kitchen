@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { ZodError } from "zod";
 import { AdminApiAuthError, requireStrictAdminApiSession } from "@/lib/auth";
 import { isDatabaseConfigured } from "@/lib/env";
@@ -58,6 +59,9 @@ export async function PUT(request: Request) {
       targetType: "setting",
       targetId: settings.id
     });
+    revalidateTag("site-settings");
+    revalidatePath("/");
+    revalidatePath("/checkout");
 
     return NextResponse.json({ ok: true, settings });
   } catch (error) {

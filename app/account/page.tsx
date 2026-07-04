@@ -3,15 +3,20 @@ import { Footer } from "@/components/site/footer";
 import { Card } from "@/components/ui/card";
 import { GuestOrderLookup } from "@/components/account/guest-order-lookup";
 import { CustomerAuthCard } from "@/components/auth/customer-auth-card";
-import { getSessionContext } from "@/lib/auth";
+import { getAuthenticatedUser } from "@/lib/auth";
+import { isWhitelistedAdminEmail } from "@/lib/env";
 import { getOrdersForUser } from "@/lib/orders";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
-  const { user, profile } = await getSessionContext();
+  const user = await getAuthenticatedUser();
   const orders = user ? await getOrdersForUser(user.id) : [];
+  const fullName =
+    typeof user?.user_metadata?.full_name === "string"
+      ? user.user_metadata.full_name
+      : "Not set";
 
   return (
     <main>
@@ -26,16 +31,8 @@ export default async function AccountPage() {
               <h1 className="mt-3 font-serif text-4xl">Your orders and profile</h1>
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <Info label="Email" value={user.email ?? "No email"} />
-                <Info label="Role" value={profile?.role ?? "USER"} />
-                <Info
-                  label="Name"
-                  value={
-                    profile?.fullName ??
-                    (typeof user.user_metadata?.full_name === "string"
-                      ? user.user_metadata.full_name
-                      : "Not set")
-                  }
-                />
+                <Info label="Role" value={isWhitelistedAdminEmail(user.email) ? "ADMIN" : "USER"} />
+                <Info label="Name" value={fullName} />
                 <Info label="Phone" value={user.phone ?? "Not linked"} />
               </div>
               <form action="/auth/signout" method="post" className="mt-8">

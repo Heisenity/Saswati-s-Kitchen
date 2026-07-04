@@ -17,6 +17,9 @@ type SessionContext = {
   profile: ProfileShape | null;
 };
 
+const profileCache = new Map<string, { profile: ProfileShape; expiresAt: number }>();
+const profileCacheTtlMs = 5 * 60 * 1000;
+
 export class AdminApiAuthError extends Error {
   constructor(
     public status: 401 | 403,
@@ -35,6 +38,9 @@ function isVerifiedUser(user?: User | null) {
 }
 
 async function ensureProfile(user: User) {
+  const cached = profileCache.get(user.id);
+  if (cached && cached.expiresAt > Date.now()) return cached.profile;
+
   const role = isWhitelistedAdminEmail(user.email) ? ("ADMIN" as const) : ("USER" as const);
   const fallbackProfile = {
     id: user.id,
@@ -55,7 +61,7 @@ async function ensureProfile(user: User) {
   }
 
   try {
-    return await prisma.profile.upsert({
+    const profile = await prisma.profile.upsert({
       where: { id: user.id },
       update: {
         email: user.email ?? null,
@@ -90,6 +96,9 @@ async function ensureProfile(user: User) {
         role: true
       }
     });
+    const resolvedProfile = profile ?? fallbackProfile;
+    profileCache.set(user.id, { profile: resolvedProfile, expiresAt: Date.now() + profileCacheTtlMs });
+    return resolvedProfile;
   } catch (error) {
     if (isPrismaConnectionError(error)) return fallbackProfile;
     throw error;
@@ -114,15 +123,26 @@ export async function getSessionContext(): Promise<SessionContext> {
   return { user, profile };
 }
 
-export async function getServerAdminContext() {
-  if (!isSupabaseAuthConfigured() || !isDatabaseConfigured()) {
-    return null;
-  }
-
+export async function getAuthenticatedUser() {
+  if (!isSupabaseAuthConfigured()) return null;
   const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();
+  return user;
+}
+
+export async function getServerAdminContext(authenticatedUser?: User | null) {
+  if (!isSupabaseAuthConfigured() || !isDatabaseConfigured()) {
+    return null;
+  }
+
+  let user = authenticatedUser;
+  if (user === undefined) {
+    const supabase = await createClient();
+    const response = await supabase.auth.getUser();
+    user = response.data.user;
+  }
 
   const email = normalizeEmail(user?.email);
   if (!user || !isVerifiedUser(user) || !email || !isWhitelistedAdminEmail(email)) {
@@ -163,7 +183,7 @@ export async function verifyAdminSession() {
 }
 
 export async function requireUserSession(redirectTo = "/login") {
-  const { user } = await getSessionContext();
+  const user = await getAuthenticatedUser();
   if (!user) redirect(redirectTo);
 }
 
@@ -181,7 +201,7 @@ export async function requireStrictAdminSession() {
     redirect("/admin/login?error=login_required");
   }
 
-  const admin = await getServerAdminContext();
+  const admin = await getServerAdminContext(user);
   if (!admin) {
     redirect("/admin/login?error=admin_required");
   }
@@ -207,7 +227,7 @@ export async function requireStrictAdminApiSession() {
     throw new AdminApiAuthError(401, "Unauthorized");
   }
 
-  const admin = await getServerAdminContext();
+  const admin = await getServerAdminContext(user);
   if (!admin) {
     throw new AdminApiAuthError(403, "Forbidden");
   }

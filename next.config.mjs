@@ -4,6 +4,7 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:4001";
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://ovmvmjgutbdtkxnzkvpb.supabase.co";
 const r2PublicUrl = process.env.R2_PUBLIC_URL ?? "https://pub-9d2bed8b98a0462bb1d4d2a1d7f9fcd6.r2.dev";
+const r2Hostname = new URL(r2PublicUrl).hostname;
 
 function getOrigin(value) {
   try {
@@ -17,6 +18,7 @@ const connectSources = [
   "'self'",
   getOrigin(appUrl),
   getOrigin(supabaseUrl),
+  getOrigin(r2PublicUrl),
   "https://*.supabase.co",
   "wss://*.supabase.co",
   appUrl.startsWith("https://")
@@ -48,8 +50,19 @@ const csp = [
 
 const nextConfig = {
   distDir: isDev ? ".next-dev" : ".next",
+  async redirects() {
+    return [
+      { source: "/favicon.ico", destination: "/brand/logo.jpg", permanent: true }
+    ];
+  },
   async headers() {
     return [
+      {
+        source: "/brand/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" }
+        ]
+      },
       {
         source: "/(.*)",
         headers: [
@@ -69,7 +82,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**"
+        hostname: r2Hostname
       }
     ],
     qualities: [75, 82, 84]

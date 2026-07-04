@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { isPrismaConnectionError, prisma } from "@/lib/prisma";
 import { defaultMenuItems } from "@/lib/default-data";
 import { isDatabaseConfigured } from "@/lib/env";
@@ -18,7 +19,7 @@ function getFallbackMenuItems() {
   }));
 }
 
-export async function getMenuItems() {
+async function loadMenuItems() {
   if (!isDatabaseConfigured()) {
     return getFallbackMenuItems();
   }
@@ -47,6 +48,15 @@ export async function getMenuItems() {
     if (isPrismaConnectionError(error)) return getFallbackMenuItems();
     throw error;
   }
+}
+
+const getCachedMenuItems = unstable_cache(loadMenuItems, ["public-menu"], {
+  revalidate: 300,
+  tags: ["public-menu"]
+});
+
+export async function getMenuItems() {
+  return getCachedMenuItems();
 }
 
 export async function getAdminMenuItems() {

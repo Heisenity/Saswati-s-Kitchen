@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { isPrismaConnectionError, prisma } from "@/lib/prisma";
 import { defaultKitchenCoordinates, defaultSettings } from "@/lib/default-data";
 import { isDatabaseConfigured } from "@/lib/env";
@@ -7,7 +8,7 @@ const oldKitchenCoordinates = {
   longitude: 88.37
 };
 
-export async function getSettings() {
+async function loadSettings() {
   if (!isDatabaseConfigured()) return { id: "default-setting", ...defaultSettings };
 
   try {
@@ -38,4 +39,13 @@ export async function getSettings() {
     }
     throw error;
   }
+}
+
+const getCachedSettings = unstable_cache(loadSettings, ["site-settings"], {
+  revalidate: 300,
+  tags: ["site-settings"]
+});
+
+export async function getSettings() {
+  return getCachedSettings();
 }

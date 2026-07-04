@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
-import { getSessionContext } from "@/lib/auth";
+import { isSupabaseAuthConfigured, isWhitelistedAdminEmail } from "@/lib/env";
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
-  const { user, profile } = await getSessionContext();
+  if (!isSupabaseAuthConfigured()) {
+    return NextResponse.json({ authenticated: false, role: "USER" });
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   return NextResponse.json(
-    { authenticated: Boolean(user), role: profile?.role ?? "USER" },
+    {
+      authenticated: Boolean(user),
+      role: isWhitelistedAdminEmail(user?.email) ? "ADMIN" : "USER"
+    },
     { headers: { "Cache-Control": "no-store" } }
   );
 }

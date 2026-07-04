@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Bell, Menu, X } from "lucide-react";
 import { CartDrawer } from "@/components/cart/cart-drawer";
@@ -26,6 +26,7 @@ export function HeaderActions({ onSelectMenu }: { onSelectMenu: (type: "LUNCH" |
   const [user, setUser] = useState<HeaderUser>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const sessionRequest = useRef<Promise<HeaderUser> | null>(null);
 
   function getCacheKey(email?: string | null) {
     return email ? `saswatis-kitchen:header-user:${email.toLowerCase()}` : "";
@@ -77,9 +78,15 @@ export function HeaderActions({ onSelectMenu }: { onSelectMenu: (type: "LUNCH" |
       return;
     }
 
-    const response = await fetch("/api/account/session", { cache: "no-store" });
-    const result = await response.json().catch(() => null);
-    const resolvedUser = { ...nextUser, role: result?.role === "ADMIN" ? "ADMIN" : "USER" } satisfies NonNullable<HeaderUser>;
+    sessionRequest.current ??= fetch("/api/account/session", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((result) => ({
+        ...nextUser,
+        role: result?.role === "ADMIN" ? "ADMIN" as const : "USER" as const
+      }))
+      .catch(() => ({ ...nextUser, role: "USER" as const }));
+    const resolvedUser = await sessionRequest.current;
+    sessionRequest.current = null;
     setUser(resolvedUser);
     writeCachedUser(resolvedUser);
   }
@@ -89,9 +96,9 @@ export function HeaderActions({ onSelectMenu }: { onSelectMenu: (type: "LUNCH" |
     setMounted(true);
     const supabase = createClient();
 
-    void supabase.auth.getUser().then(({ data }) => {
+    void supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
-      void loadUser(data.user ?? null);
+      void loadUser(data.session?.user ?? null);
     });
 
     const {

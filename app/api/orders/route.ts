@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { createOrder } from "@/lib/orders";
 import { isPrismaConnectionError } from "@/lib/prisma";
 import { applyRateLimit, rejectJson, requireTrustedOrigin } from "@/lib/security";
 import { createClient } from "@/lib/supabase/server";
 import { orderSchema } from "@/lib/validation";
+import { sendNewOrderNotification, sendPaymentProofNotification } from "@/lib/notifications";
 
 export async function POST(request: Request) {
   const rateLimit = applyRateLimit(request, {
@@ -32,6 +33,19 @@ export async function POST(request: Request) {
       ...payload,
       userId: user.id
     });
+
+    if ("customerName" in order) {
+      after(async () => {
+        await Promise.allSettled([
+          sendNewOrderNotification(order, {
+            manualDeliveryReviewRequired: payload.manualDeliveryReviewRequired
+          }),
+          payload.paymentScreenshotUrl
+            ? sendPaymentProofNotification(order, payload.paymentProofAnalysis)
+            : Promise.resolve()
+        ]);
+      });
+    }
 
     return NextResponse.json({
       ok: true,

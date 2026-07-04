@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { Pool, type PoolClient, type QueryResultRow } from "pg";
+import { Pool, types, type PoolClient, type QueryResultRow } from "pg";
 import type {
   MealType,
   MenuItemKind,
@@ -11,6 +11,9 @@ import type {
 } from "@/lib/db-types";
 import { env } from "@/lib/env";
 import { toDateValue } from "@/lib/utils";
+
+// Supabase stores these columns in UTC; pg otherwise interprets timestamp-without-time-zone locally.
+types.setTypeParser(1114, (value) => new Date(`${value}Z`));
 
 type DbClient = Pool | PoolClient;
 

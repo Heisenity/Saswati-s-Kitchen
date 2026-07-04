@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findOrCreateCustomerChat } from "@/lib/chat-service";
-import { getSessionContext } from "@/lib/auth";
+import { getAuthenticatedUser } from "@/lib/auth";
 import { getOrdersForUser } from "@/lib/orders";
 import {
   isLikelyHumanName,
@@ -12,10 +12,11 @@ import { applyRateLimit, rejectJson, requireTrustedOrigin } from "@/lib/security
 import { customerChatSessionSchema } from "@/lib/validation";
 
 async function resolveChatIdentity(fallback: { customerName: string; phone: string }) {
-  const { user, profile } = await getSessionContext();
+  const user = await getAuthenticatedUser();
 
   if (!user) {
     return {
+      userId: null,
       customerName: sanitizeHumanName(fallback.customerName),
       phone: normalizeIndianMobile(fallback.phone),
       nameLocked: false,
@@ -24,8 +25,7 @@ async function resolveChatIdentity(fallback: { customerName: string; phone: stri
   }
 
   const accountName = sanitizeHumanName(
-    profile?.fullName ??
-      (typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : "") ??
+    (typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : "") ||
       fallback.customerName
   );
 
@@ -35,6 +35,7 @@ async function resolveChatIdentity(fallback: { customerName: string; phone: stri
     normalizeIndianMobile(fallback.phone);
 
   return {
+    userId: user.id,
     customerName: accountName,
     phone: accountPhone,
     nameLocked: isLikelyHumanName(accountName),

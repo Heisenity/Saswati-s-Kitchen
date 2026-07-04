@@ -299,11 +299,14 @@ export function SupportSection() {
               </div>
               <div className="rounded-3xl bg-white px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Mail us</p>
-                <a href="mailto:saswatikitchen@gmail.com" className="mt-2 block break-all font-semibold text-foreground">
-                  saswatikitchen@gmail.com
+                <a href="mailto:saswatisenkitchen@gmail.com" className="mt-2 block break-all font-semibold text-foreground">
+                  saswatisenkitchen@gmail.com
                 </a>
               </div>
             </div>
+            <p className="mt-4 inline-flex rounded-full border border-leaf/25 bg-leaf/10 px-4 py-2 text-xs font-semibold text-leaf shadow-[0_0_18px_rgba(30,142,82,0.12)] animate-pulse">
+              Live support daily from 10:00 AM to 9:00 PM
+            </p>
           </div>
           <div className="flex flex-col justify-center gap-4">
             <button

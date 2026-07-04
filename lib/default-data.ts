@@ -158,7 +158,7 @@ export const defaultMenuItems: MenuSeed[] = [
     description: "Fresh soft roti to add to any meal.",
     price: 5,
     badge: "Add-on",
-    imageUrl: "/brand/veg-thali.jpg",
+    imageUrl: "/brand/roti-addon.jpg",
     mealType: "LUNCH",
     itemKind: "ADD_ON",
     stockLimit: 100,
@@ -170,7 +170,7 @@ export const defaultMenuItems: MenuSeed[] = [
     description: "An extra serving of steamed rice.",
     price: 20,
     badge: "Add-on",
-    imageUrl: "/brand/veg-thali.jpg",
+    imageUrl: "/brand/extra-rice.jpg",
     mealType: "LUNCH",
     itemKind: "ADD_ON",
     stockLimit: 60,
@@ -182,11 +182,23 @@ export const defaultMenuItems: MenuSeed[] = [
     description: "Homestyle Bengali chicken curry plate.",
     price: 80,
     badge: "Add-on",
-    imageUrl: "/brand/chicken-thali.jpg",
+    imageUrl: "/brand/chicken-curry-plate.jpg",
     mealType: "LUNCH",
     itemKind: "ADD_ON",
     stockLimit: 30,
-    components: ["Chicken Curry (3 pcs)"]
+    components: ["Chicken Curry (4 pcs, including leg piece)"]
+  },
+  {
+    name: "Butter Parantha",
+    slug: "addon-butter-parantha",
+    description: "Golden, flaky Bengali-style butter parantha served warm.",
+    price: 10,
+    badge: "Add-on",
+    imageUrl: "https://pub-9d2bed8b98a0462bb1d4d2a1d7f9fcd6.r2.dev/menu-images/34c96396-0eac-41dd-a2f1-a08c2d77bfed.jpg",
+    mealType: "LUNCH",
+    itemKind: "ADD_ON",
+    stockLimit: 100,
+    components: ["1 piece"]
   },
   {
     name: "Roti",
@@ -194,7 +206,7 @@ export const defaultMenuItems: MenuSeed[] = [
     description: "Fresh soft roti to add to any meal.",
     price: 5,
     badge: "Add-on",
-    imageUrl: "/brand/veg-thali.jpg",
+    imageUrl: "/brand/roti-addon.jpg",
     mealType: "DINNER",
     itemKind: "ADD_ON",
     stockLimit: 100,
@@ -206,7 +218,7 @@ export const defaultMenuItems: MenuSeed[] = [
     description: "An extra serving of steamed rice.",
     price: 20,
     badge: "Add-on",
-    imageUrl: "/brand/veg-thali.jpg",
+    imageUrl: "/brand/extra-rice.jpg",
     mealType: "DINNER",
     itemKind: "ADD_ON",
     stockLimit: 60,
@@ -218,11 +230,23 @@ export const defaultMenuItems: MenuSeed[] = [
     description: "Homestyle Bengali chicken curry plate.",
     price: 80,
     badge: "Add-on",
-    imageUrl: "/brand/chicken-thali.jpg",
+    imageUrl: "/brand/chicken-curry-plate.jpg",
     mealType: "DINNER",
     itemKind: "ADD_ON",
     stockLimit: 30,
-    components: ["Chicken Curry (3 pcs)"]
+    components: ["Chicken Curry (4 pcs, including leg piece)"]
+  },
+  {
+    name: "Butter Parantha",
+    slug: "dinner-addon-butter-parantha",
+    description: "Golden, flaky Bengali-style butter parantha served warm.",
+    price: 10,
+    badge: "Add-on",
+    imageUrl: "https://pub-9d2bed8b98a0462bb1d4d2a1d7f9fcd6.r2.dev/menu-images/34c96396-0eac-41dd-a2f1-a08c2d77bfed.jpg",
+    mealType: "DINNER",
+    itemKind: "ADD_ON",
+    stockLimit: 100,
+    components: ["1 piece"]
   }
 ];
 

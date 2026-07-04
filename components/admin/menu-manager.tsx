@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,7 +49,6 @@ function createEmptyForm(mealType: MenuRow["mealType"] = "LUNCH"): MenuForm {
 }
 
 export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
-  const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [form, setForm] = useState(createEmptyForm());
@@ -71,6 +69,7 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
       return JSON.parse(text) as {
         ok?: boolean;
         error?: string;
+        uploadUrl?: string;
         url?: string;
         item?: MenuRow;
         items?: MenuRow[];
@@ -167,7 +166,6 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
         ? current.map((row) => (row.id === savedItem.id ? savedItem : row))
         : [savedItem, ...current]
     );
-    router.refresh();
     setForm(createEmptyForm(viewMealType));
     setEditingId(null);
     setMessage(editingId ? "Menu item updated." : "Menu item added.");
@@ -189,7 +187,6 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
 
     const updatedItem = result.item;
     syncItems((current) => current.map((row) => (row.id === item.id ? updatedItem : row)));
-    router.refresh();
   }
 
   function startEditing(item: MenuRow) {
@@ -233,7 +230,6 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
     }
 
     syncItems((current) => current.filter((row) => row.id !== item.id));
-    router.refresh();
     if (editingId === item.id) resetForm();
     setMessage("Menu item deleted.");
   }
@@ -275,7 +271,6 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
     }
 
     syncItems(result.items);
-    router.refresh();
     setBulkComponent("");
     setMessage(
       bulkAction === "add_component"
@@ -285,31 +280,44 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
   }
 
   async function uploadImage(file: File) {
+    if (file.size <= 0 || file.size > 5 * 1024 * 1024) {
+      setMessage("Please use an image smaller than 5 MB.");
+      return;
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setMessage("Please use a JPG, PNG, or WebP image.");
+      return;
+    }
+
     setUploadingImage(true);
     setMessage("");
 
-    const formData = new FormData();
-    formData.append("file", file);
+    try {
+      const response = await fetch("/api/uploads/menu-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName: file.name, contentType: file.type, size: file.size })
+      });
+      const result = await readApiResult(response, "Image upload failed.");
+      if (!result.ok || !result.uploadUrl || !result.url) {
+        setMessage(result.error ?? "Image upload failed.");
+        return;
+      }
 
-    const response = await fetch("/api/uploads/menu-image", {
-      method: "POST",
-      body: formData
-    });
-    const result = await readApiResult(response, "Image upload failed.");
-    setUploadingImage(false);
+      const r2Response = await fetch(result.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file
+      });
+      if (!r2Response.ok) throw new Error("Image upload failed.");
 
-    if (!result.ok) {
-      setMessage(result.error ?? "Image upload failed.");
-      return;
+      setForm((current) => ({ ...current, imageUrl: result.url as string }));
+      setMessage("Image uploaded. Save the menu item to keep it.");
+    } catch {
+      setMessage("Image upload failed. Please try again.");
+    } finally {
+      setUploadingImage(false);
     }
-    if (!result.url) {
-      setMessage("Image upload failed.");
-      return;
-    }
-
-    const nextImageUrl = result.url;
-    setForm((current) => ({ ...current, imageUrl: nextImageUrl }));
-    setMessage("Image uploaded. Save the menu item to keep it.");
   }
 
   return (
@@ -394,14 +402,14 @@ export function MenuManager({ initialItems }: { initialItems: MenuRow[] }) {
               <label className="text-sm font-semibold text-stone-700">Upload a new thali image</label>
               <Input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (file) void uploadImage(file);
                   event.currentTarget.value = "";
                 }}
               />
-              <p className="text-xs text-stone-500">Upload once, then save the menu item to apply the new picture everywhere.</p>
+              <p className="text-xs text-stone-500">JPG, PNG, or WebP smaller than 5 MB. Upload once, then save the menu item.</p>
             </div>
             {form.imageUrl ? (
               <img

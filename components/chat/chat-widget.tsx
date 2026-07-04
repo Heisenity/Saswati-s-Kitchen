@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import type { User } from "@supabase/supabase-js";
 import { FileText, LoaderCircle, MessageCircle, Paperclip, SendHorizontal } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -82,18 +81,6 @@ function getChatStorageKey(userId?: string | null) {
   return `saswatis-kitchen-chat:${userId ?? "guest"}`;
 }
 
-function getChatAccountName(user: User | null) {
-  if (!user) return "";
-
-  const candidates = [
-    typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : "",
-    typeof user.user_metadata?.name === "string" ? user.user_metadata.name : "",
-    typeof user.user_metadata?.display_name === "string" ? user.user_metadata.display_name : ""
-  ];
-
-  return sanitizeHumanName(candidates.find(Boolean) ?? "");
-}
-
 export function ChatWidget() {
   const supabase = useRef(createClient()).current;
   const roomChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -145,36 +132,37 @@ export function ChatWidget() {
   }, []);
 
   useEffect(() => {
+    if (!open) return;
+
     let active = true;
+    let syncing = false;
 
     async function syncIdentity() {
+      if (syncing) return;
+      syncing = true;
       setProfileLoading(true);
       try {
-        const [{ data }, profileResponse] = await Promise.all([
-          supabase.auth.getUser(),
-          fetch("/api/chat/session", { cache: "no-store" }).catch(() => null)
-        ]);
-        const user = data.user;
+        const profileResponse = await fetch("/api/chat/session", { cache: "no-store" }).catch(() => null);
 
         if (!active) return;
 
-        const nextIdentity = user?.id ?? "guest";
-        const nextStorageKey = getChatStorageKey(user?.id);
-        const storedName = window.localStorage.getItem(`${nextStorageKey}:name`) ?? "";
-        const storedPhone = window.localStorage.getItem(`${nextStorageKey}:phone`) ?? "";
-        const identityChanged = identityRef.current !== nextIdentity;
         const identity =
           profileResponse && profileResponse.ok
             ? ((await profileResponse.json()) as {
                 ok?: boolean;
+                userId?: string | null;
                 customerName?: string;
                 phone?: string;
                 nameLocked?: boolean;
                 phoneLocked?: boolean;
               })
             : null;
-        const accountName =
-          sanitizeHumanName(identity?.customerName ?? "") || getChatAccountName(user);
+        const nextIdentity = identity?.userId ?? "guest";
+        const nextStorageKey = getChatStorageKey(identity?.userId);
+        const storedName = window.localStorage.getItem(`${nextStorageKey}:name`) ?? "";
+        const storedPhone = window.localStorage.getItem(`${nextStorageKey}:phone`) ?? "";
+        const identityChanged = identityRef.current !== nextIdentity;
+        const accountName = sanitizeHumanName(identity?.customerName ?? "");
         const nextPhone = normalizeIndianMobile(identity?.phone ?? "") || storedPhone;
 
         setStorageKey(nextStorageKey);
@@ -202,6 +190,7 @@ export function ChatWidget() {
           setPhone((current) => current || nextPhone);
         }
       } finally {
+        syncing = false;
         if (active) setProfileLoading(false);
       }
     }
@@ -217,7 +206,7 @@ export function ChatWidget() {
       active = false;
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [open, supabase]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });

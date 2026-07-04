@@ -5,7 +5,6 @@ import { getSettings } from "@/lib/settings";
 import { MAX_DELIVERY_DISTANCE_KM, calculateDeliveryCharge, haversineDistanceKm } from "@/lib/delivery";
 import type { PaymentProofAnalysis } from "@/lib/payment-proof";
 import { assertSlotAvailable } from "@/lib/slot";
-import { sendNewOrderNotification, sendPaymentProofNotification } from "@/lib/notifications";
 import { isDatabaseConfigured } from "@/lib/env";
 import { matchesPhone, normalizePhone } from "@/lib/phone";
 
@@ -172,12 +171,6 @@ export async function createOrder(input: CreateOrderInput) {
     }
   }
 
-  await sendNewOrderNotification(order, {
-    manualDeliveryReviewRequired
-  });
-  if (input.paymentScreenshotUrl) {
-    await sendPaymentProofNotification(order, input.paymentProofAnalysis);
-  }
   return order;
 }
 

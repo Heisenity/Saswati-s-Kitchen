@@ -28,7 +28,6 @@
     "express": "^4.21.2",
     "framer-motion": "^12.17.3",
     "lucide-react": "^0.525.0",
-    "multer": "^2.0.2",
     "next": "^15.3.4",
     "nodemailer": "^7.0.3",
     "pg": "^8.22.0",
@@ -43,7 +42,6 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
-    "@types/multer": "^2.0.0",
     "@types/node": "^22.15.30",
     "@types/nodemailer": "^6.4.17",
     "@types/pg": "^8.20.0",

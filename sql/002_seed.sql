@@ -47,24 +47,25 @@ on conflict (id) do update set
   "updatedAt" = now();
 
 insert into "MenuItem" (
-  id, name, slug, description, price, "imageUrl", "mealType", badge,
+  id, name, slug, description, price, "imageUrl", "mealType", "itemKind", badge,
   "isActive", "stockLimit", "createdAt", "updatedAt"
 )
 values
-  ('mutton-thali', 'Mutton Thali', 'mutton-thali', 'Rich Bengali mutton kosha for a special lunch.', 249, '/brand/mutton-thali.jpg', 'LUNCH', 'Premium', true, 18, now(), now()),
-  ('chingri-thali', 'Chingri Thali', 'chingri-thali', 'Light, flavorful and comforting prawn meal.', 159, '/brand/chingri-thali.jpg', 'LUNCH', 'Chef''s Pick', true, 20, now(), now()),
-  ('pabda-thali', 'Pabda Thali', 'pabda-thali', 'Authentic Bengali sorshe pabda taste.', 159, '/brand/pabda-thali.jpg', 'LUNCH', 'Traditional Favorite', true, 16, now(), now()),
-  ('chicken-thali', 'Chicken Thali', 'chicken-thali', 'Everyday comfort with homestyle chicken curry.', 149, '/brand/chicken-thali.jpg', 'LUNCH', 'Most Loved', true, 24, now(), now()),
-  ('katlaa-macher-thali', 'Katlaa Macher Thali', 'katlaa-macher-thali', 'Balanced Bengali fish thali at a great price.', 139, '/brand/katlaa-thali.jpg', 'LUNCH', 'Value Choice', true, 22, now(), now()),
-  ('rui-macher-thali', 'Rui Macher Thali', 'rui-macher-thali', 'Classic rui macher kalia, perfect for regular lunch.', 119, '/brand/rui-thali.jpg', 'LUNCH', 'Best Seller', true, 30, now(), now()),
-  ('egg-thali', 'Egg Thali', 'egg-thali', 'Simple, filling and affordable home-style meal.', 99, '/brand/egg-thali.jpg', 'LUNCH', 'Budget Favorite', true, 25, now(), now()),
-  ('veg-thali', 'Veg Thali', 'veg-thali', 'Fresh vegetarian Bengali meal for everyday eating.', 89, '/brand/veg-thali.jpg', 'LUNCH', 'Light & Comforting', true, 26, now(), now())
+  ('mutton-thali', 'Mutton Thali', 'mutton-thali', 'Rich Bengali mutton kosha for a special lunch.', 249, '/brand/mutton-thali.jpg', 'LUNCH', 'THALI', 'Premium', true, 18, now(), now()),
+  ('chingri-thali', 'Chingri Thali', 'chingri-thali', 'Light, flavorful and comforting prawn meal.', 159, '/brand/chingri-thali.jpg', 'LUNCH', 'THALI', 'Chef''s Pick', true, 20, now(), now()),
+  ('pabda-thali', 'Pabda Thali', 'pabda-thali', 'Authentic Bengali sorshe pabda taste.', 159, '/brand/pabda-thali.jpg', 'LUNCH', 'THALI', 'Traditional Favorite', true, 16, now(), now()),
+  ('chicken-thali', 'Chicken Thali', 'chicken-thali', 'Everyday comfort with homestyle chicken curry.', 149, '/brand/chicken-thali.jpg', 'LUNCH', 'THALI', 'Most Loved', true, 24, now(), now()),
+  ('katlaa-macher-thali', 'Katlaa Macher Thali', 'katlaa-macher-thali', 'Balanced Bengali fish thali at a great price.', 139, '/brand/katlaa-thali.jpg', 'LUNCH', 'THALI', 'Value Choice', true, 22, now(), now()),
+  ('rui-macher-thali', 'Rui Macher Thali', 'rui-macher-thali', 'Classic rui macher kalia, perfect for regular lunch.', 119, '/brand/rui-thali.jpg', 'LUNCH', 'THALI', 'Best Seller', true, 30, now(), now()),
+  ('egg-thali', 'Egg Thali', 'egg-thali', 'Simple, filling and affordable home-style meal.', 99, '/brand/egg-thali.jpg', 'LUNCH', 'THALI', 'Budget Favorite', true, 25, now(), now()),
+  ('veg-thali', 'Veg Thali', 'veg-thali', 'Fresh vegetarian Bengali meal for everyday eating.', 89, '/brand/veg-thali.jpg', 'LUNCH', 'THALI', 'Light & Comforting', true, 26, now(), now())
 on conflict (slug) do update set
   name = excluded.name,
   description = excluded.description,
   price = excluded.price,
   "imageUrl" = excluded."imageUrl",
   "mealType" = excluded."mealType",
+  "itemKind" = excluded."itemKind",
   badge = excluded.badge,
   "isActive" = excluded."isActive",
   "stockLimit" = excluded."stockLimit",
@@ -150,12 +151,14 @@ values
   ('dinner-katlaa-macher-thali', 'Katlaa Macher Thali', 'dinner-katlaa-macher-thali', 'Classic Katla curry served with a fresh Bengali dinner spread.', 139, '/brand/katlaa-thali.jpg', 'DINNER', 'THALI', 'Bengali Classic', true, 22, now(), now()),
   ('dinner-egg-thali', 'Egg Thali', 'dinner-egg-thali', 'Simple egg curry and Bengali sides for a filling dinner.', 99, '/brand/egg-thali.jpg', 'DINNER', 'THALI', 'Budget Favourite', true, 25, now(), now()),
   ('dinner-veg-thali', 'Veg Thali', 'dinner-veg-thali', 'Light vegetarian Bengali dinner with dhokar dalna.', 89, '/brand/veg-thali.jpg', 'DINNER', 'THALI', 'Veg Comfort', true, 26, now(), now()),
-  ('addon-roti', 'Roti', 'addon-roti', 'Fresh soft roti to add to any meal.', 5, '/brand/veg-thali.jpg', 'LUNCH', 'ADD_ON', 'Add-on', true, 100, now(), now()),
-  ('addon-extra-rice', 'Extra Rice', 'addon-extra-rice', 'An extra serving of steamed rice.', 20, '/brand/veg-thali.jpg', 'LUNCH', 'ADD_ON', 'Add-on', true, 60, now(), now()),
-  ('addon-chicken-curry-plate', 'Chicken Curry Plate', 'addon-chicken-curry-plate', 'Homestyle Bengali chicken curry plate.', 80, '/brand/chicken-thali.jpg', 'LUNCH', 'ADD_ON', 'Add-on', true, 30, now(), now()),
-  ('dinner-addon-roti', 'Roti', 'dinner-addon-roti', 'Fresh soft roti to add to any meal.', 5, '/brand/veg-thali.jpg', 'DINNER', 'ADD_ON', 'Add-on', true, 100, now(), now()),
-  ('dinner-addon-extra-rice', 'Extra Rice', 'dinner-addon-extra-rice', 'An extra serving of steamed rice.', 20, '/brand/veg-thali.jpg', 'DINNER', 'ADD_ON', 'Add-on', true, 60, now(), now()),
-  ('dinner-addon-chicken-curry-plate', 'Chicken Curry Plate', 'dinner-addon-chicken-curry-plate', 'Homestyle Bengali chicken curry plate.', 80, '/brand/chicken-thali.jpg', 'DINNER', 'ADD_ON', 'Add-on', true, 30, now(), now())
+  ('addon-roti', 'Roti', 'addon-roti', 'Fresh soft roti to add to any meal.', 5, '/brand/roti-addon.jpg', 'LUNCH', 'ADD_ON', 'Add-on', true, 100, now(), now()),
+  ('addon-extra-rice', 'Extra Rice', 'addon-extra-rice', 'An extra serving of steamed rice.', 20, '/brand/extra-rice.jpg', 'LUNCH', 'ADD_ON', 'Add-on', true, 60, now(), now()),
+  ('addon-chicken-curry-plate', 'Chicken Curry Plate', 'addon-chicken-curry-plate', 'Homestyle Bengali chicken curry plate.', 80, '/brand/chicken-curry-plate.jpg', 'LUNCH', 'ADD_ON', 'Add-on', true, 30, now(), now()),
+  ('addon-butter-parantha', 'Butter Parantha', 'addon-butter-parantha', 'Golden, flaky Bengali-style butter parantha served warm.', 10, 'https://pub-9d2bed8b98a0462bb1d4d2a1d7f9fcd6.r2.dev/menu-images/34c96396-0eac-41dd-a2f1-a08c2d77bfed.jpg', 'LUNCH', 'ADD_ON', 'Add-on', true, 100, now(), now()),
+  ('dinner-addon-roti', 'Roti', 'dinner-addon-roti', 'Fresh soft roti to add to any meal.', 5, '/brand/roti-addon.jpg', 'DINNER', 'ADD_ON', 'Add-on', true, 100, now(), now()),
+  ('dinner-addon-extra-rice', 'Extra Rice', 'dinner-addon-extra-rice', 'An extra serving of steamed rice.', 20, '/brand/extra-rice.jpg', 'DINNER', 'ADD_ON', 'Add-on', true, 60, now(), now()),
+  ('dinner-addon-chicken-curry-plate', 'Chicken Curry Plate', 'dinner-addon-chicken-curry-plate', 'Homestyle Bengali chicken curry plate.', 80, '/brand/chicken-curry-plate.jpg', 'DINNER', 'ADD_ON', 'Add-on', true, 30, now(), now()),
+  ('dinner-addon-butter-parantha', 'Butter Parantha', 'dinner-addon-butter-parantha', 'Golden, flaky Bengali-style butter parantha served warm.', 10, 'https://pub-9d2bed8b98a0462bb1d4d2a1d7f9fcd6.r2.dev/menu-images/34c96396-0eac-41dd-a2f1-a08c2d77bfed.jpg', 'DINNER', 'ADD_ON', 'Add-on', true, 100, now(), now())
 on conflict (slug) do update set
   name = excluded.name,
   description = excluded.description,
@@ -177,9 +180,11 @@ where "menuItemId" in (
   'addon-roti',
   'addon-extra-rice',
   'addon-chicken-curry-plate',
+  'addon-butter-parantha',
   'dinner-addon-roti',
   'dinner-addon-extra-rice',
-  'dinner-addon-chicken-curry-plate'
+  'dinner-addon-chicken-curry-plate',
+  'dinner-addon-butter-parantha'
 );
 
 insert into "MenuItemComponent" (id, "menuItemId", "itemName")
@@ -214,9 +219,11 @@ values
   ('dinner-veg-thali-7', 'dinner-veg-thali', 'Salad'),
   ('addon-roti-1', 'addon-roti', '1 piece'),
   ('addon-extra-rice-1', 'addon-extra-rice', '1 serving'),
-  ('addon-chicken-curry-plate-1', 'addon-chicken-curry-plate', 'Chicken Curry (3 pcs)'),
+  ('addon-chicken-curry-plate-1', 'addon-chicken-curry-plate', 'Chicken Curry (4 pcs, including leg piece)'),
+  ('addon-butter-parantha-1', 'addon-butter-parantha', '1 piece'),
   ('dinner-addon-roti-1', 'dinner-addon-roti', '1 piece'),
   ('dinner-addon-extra-rice-1', 'dinner-addon-extra-rice', '1 serving'),
-  ('dinner-addon-chicken-curry-plate-1', 'dinner-addon-chicken-curry-plate', 'Chicken Curry (3 pcs)');
+  ('dinner-addon-chicken-curry-plate-1', 'dinner-addon-chicken-curry-plate', 'Chicken Curry (4 pcs, including leg piece)'),
+  ('dinner-addon-butter-parantha-1', 'dinner-addon-butter-parantha', '1 piece');
 
 commit;

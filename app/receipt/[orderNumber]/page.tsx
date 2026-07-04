@@ -2,12 +2,12 @@ import { notFound } from "next/navigation";
 import { Header } from "@/components/site/header";
 import { Footer } from "@/components/site/footer";
 import { Card } from "@/components/ui/card";
-import { ReceiptActions } from "@/components/receipt/receipt-actions";
+import { ReceiptActions, ReceiptDateTime } from "@/components/receipt/receipt-actions";
 import { prisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/env";
 import { normalizePhone } from "@/lib/phone";
 import { buildOrderWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
-import { formatCurrency, formatDateTime, toDateValue } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +49,7 @@ export default async function ReceiptPage({
               <h1 className="mt-4 font-serif text-4xl">Order confirmed for manual verification</h1>
               <div className="mt-8 grid gap-4 md:grid-cols-2">
                 <Detail label="Order ID" value={order.orderNumber} />
-                <Detail label="Date / time" value={formatDateTime(order.createdAt)} />
+                <Detail label="Date / time" value={<ReceiptDateTime value={order.createdAt.toISOString()} />} />
                 <Detail label="Customer name" value={order.customerName} />
                 <Detail label="Phone" value={normalizePhone(order.phone)} />
                 <Detail label="Address" value={order.address} />
@@ -104,8 +104,8 @@ export default async function ReceiptPage({
 
           <div className="mt-8 rounded-[24px] border border-stone-300 px-6 py-6">
             <PrintRow label="Order ID" value={order.orderNumber} />
-            <PrintRow label="Date" value={formatReceiptDate(order.createdAt)} />
-            <PrintRow label="Time" value={formatReceiptTime(order.createdAt)} />
+            <PrintRow label="Date" value={<ReceiptDateTime value={order.createdAt.toISOString()} mode="date" />} />
+            <PrintRow label="Time" value={<ReceiptDateTime value={order.createdAt.toISOString()} mode="time" />} />
           </div>
         </div>
       </main>
@@ -113,7 +113,7 @@ export default async function ReceiptPage({
   );
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
+function Detail({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="rounded-3xl bg-muted px-4 py-4">
       <p className="text-xs uppercase tracking-[0.18em] text-stone-500">{label}</p>
@@ -131,29 +131,11 @@ function Summary({ label, value }: { label: string; value: string }) {
   );
 }
 
-function PrintRow({ label, value }: { label: string; value: string }) {
+function PrintRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between border-b border-stone-200 py-4 first:pt-0 last:border-b-0 last:pb-0">
       <span className="text-sm font-semibold uppercase tracking-[0.14em] text-stone-500">{label}</span>
       <span className="text-sm font-semibold text-stone-900">{value}</span>
     </div>
   );
-}
-
-function formatReceiptDate(date: string | Date) {
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "Asia/Kolkata"
-  }).format(toDateValue(date));
-}
-
-function formatReceiptTime(date: string | Date) {
-  return new Intl.DateTimeFormat("en-IN", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: "Asia/Kolkata"
-  }).format(toDateValue(date));
 }

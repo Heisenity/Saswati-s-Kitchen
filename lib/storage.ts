@@ -1,9 +1,16 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "@/lib/env";
 import { buildStorageObjectKey, validateUploadFile } from "@/lib/security";
 
 export const paymentProofUploadOptions = {
-  maxBytes: 6 * 1024 * 1024
+  maxBytes: 5 * 1024 * 1024
+};
+
+export const menuImageUploadOptions = {
+  maxBytes: 5 * 1024 * 1024,
+  allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+  allowedExtensions: ["jpg", "jpeg", "png", "webp"]
 };
 
 function sanitizeUploadName(fileName: string) {
@@ -28,6 +35,7 @@ function classifyR2UploadError(error: unknown) {
 
   if (
     normalized.includes("accessdenied") ||
+    normalized.includes("access denied") ||
     normalized.includes("invalidaccesskeyid") ||
     normalized.includes("signaturedoesnotmatch") ||
     normalized.includes("forbidden") ||
@@ -69,7 +77,7 @@ function logR2UploadError(folder: string, error: unknown) {
         }
       : { value: error };
 
-  console.error("[payment-proof:r2-upload-failed]", {
+  console.error("[r2:upload-failed]", {
     folder,
     classification,
     ...payload
@@ -95,6 +103,54 @@ function getClient() {
       secretAccessKey: env.r2SecretAccessKey
     }
   });
+}
+
+export async function createPresignedR2Upload(input: {
+  fileName: string;
+  contentType: string;
+  size: number;
+  folder: "payment-proofs" | "menu-images";
+  maxBytes: number;
+  allowedMimeTypes: string[];
+  allowedExtensions: string[];
+}) {
+  const client = getClient();
+  if (!client || !env.r2Bucket || !env.r2PublicUrl) {
+    throw new Error("Cloudflare R2 is not configured.");
+  }
+
+  if (
+    typeof input.fileName !== "string" ||
+    typeof input.contentType !== "string" ||
+    !Number.isInteger(input.size)
+  ) {
+    throw new Error("Invalid upload.");
+  }
+
+  const safeName = sanitizeUploadName(input.fileName);
+  const extension = safeName.split(".").pop()?.toLowerCase() ?? "";
+  if (
+    input.size <= 0 ||
+    input.size > input.maxBytes ||
+    !input.allowedMimeTypes.includes(input.contentType) ||
+    !input.allowedExtensions.includes(extension)
+  ) {
+    throw new Error("Invalid upload.");
+  }
+
+  const key = buildStorageObjectKey(input.folder, safeName);
+  const command = new PutObjectCommand({
+    Bucket: env.r2Bucket,
+    Key: key,
+    ContentType: input.contentType,
+    ContentLength: input.size,
+    CacheControl: input.folder === "menu-images" ? "public, max-age=31536000, immutable" : undefined
+  });
+
+  return {
+    uploadUrl: await getSignedUrl(client, command, { expiresIn: 300 }),
+    url: `${env.r2PublicUrl.replace(/\/$/, "")}/${key}`
+  };
 }
 
 async function uploadFileToR2(
@@ -129,7 +185,8 @@ async function uploadFileToR2(
       Bucket: env.r2Bucket,
       Key: fileName,
       Body: bytes,
-      ContentType: file.type
+      ContentType: file.type,
+      CacheControl: folder === "menu-images" ? "public, max-age=31536000, immutable" : undefined
     })
   );
 
@@ -138,7 +195,7 @@ async function uploadFileToR2(
 
 export async function uploadPaymentProof(file: File) {
   if (file.size <= 0 || file.size > paymentProofUploadOptions.maxBytes) {
-    throw new Error("Attachment must be smaller than 6 MB.");
+    throw new Error("Attachment must be smaller than 5 MB.");
   }
 
   try {
@@ -151,17 +208,14 @@ export async function uploadPaymentProof(file: File) {
 }
 
 export async function uploadMenuImage(file: File) {
-  try {
-    return await uploadFileToR2(file, "menu-images", {
-      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
-      allowedExtensions: ["jpg", "jpeg", "png", "webp"],
-      maxBytes: 8 * 1024 * 1024
-    });
-  } catch (error) {
+  return uploadFileToR2(file, "menu-images", {
+    allowedMimeTypes: menuImageUploadOptions.allowedMimeTypes,
+    allowedExtensions: menuImageUploadOptions.allowedExtensions,
+    maxBytes: menuImageUploadOptions.maxBytes
+  }).catch((error) => {
     logR2UploadError("menu-images", error);
-    // ponytail: admin can keep editing even when R2 is unhappy; inline image data still renders from Postgres
-    return fileToDataUrl(file);
-  }
+    throw error;
+  });
 }
 
 export async function uploadChatAttachment(file: File, maxBytes = 5 * 1024 * 1024) {

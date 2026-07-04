@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { ZodError } from "zod";
 import { requireStrictAdminApiSession, AdminApiAuthError } from "@/lib/auth";
 import { isDatabaseConfigured } from "@/lib/env";
@@ -31,6 +31,7 @@ function handleAdminError(error: unknown) {
 }
 
 function refreshMenuViews() {
+  revalidateTag("public-menu");
   revalidatePath("/");
   revalidatePath("/checkout");
   revalidatePath("/admin/menu");

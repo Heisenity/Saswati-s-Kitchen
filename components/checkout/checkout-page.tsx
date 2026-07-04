@@ -31,6 +31,15 @@ type CheckoutPageProps = {
     lunch: "OPEN" | "CLOSED";
     dinner: "OPEN" | "CLOSED" | "NOT_OPEN";
   };
+  recommendations: Array<{
+    id: string;
+    name: string;
+    price: number;
+    imageUrl: string;
+    badge: string;
+    mealType: "LUNCH" | "DINNER";
+    itemKind: "THALI" | "ADD_ON";
+  }>;
 };
 
 type UploadedPaymentProof = {
@@ -45,23 +54,35 @@ type DeliveryQuote =
       message: string;
     };
 
-const paymentProofMaxBytes = 6 * 1024 * 1024;
+const paymentProofMaxBytes = 5 * 1024 * 1024;
+const paymentProofTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-async function fileToDataUrl(file: File) {
-  const buffer = await file.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
+async function compressPaymentProof(file: File) {
+  if (file.size <= 500 * 1024 || !file.type.startsWith("image/")) return file;
 
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
+  try {
+    const image = await createImageBitmap(file);
+    const scale = Math.min(1, 1280 / Math.max(image.width, image.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(image.width * scale);
+    canvas.height = Math.round(image.height * scale);
+    canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+    image.close();
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.72)
+    );
+    return blob && blob.size < file.size
+      ? new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" })
+      : file;
+  } catch {
+    return file;
   }
-
-  return `data:${file.type || "application/octet-stream"};base64,${btoa(binary)}`;
 }
 
-export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
+export function CheckoutPage({ settings, slotState, recommendations }: CheckoutPageProps) {
   const router = useRouter();
-  const { items, subtotal, clearCart } = useCart();
+  const { items, subtotal, addItem, clearCart } = useCart();
   const [customerName, setCustomerName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -85,6 +106,13 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
   const hasLocation =
     Number.isFinite(location.latitude) && Number.isFinite(location.longitude);
   const isManualDeliveryReview = deliveryQuote?.mode === "MANUAL_REVIEW";
+  const suggestedItems = useMemo(() => {
+    const cartIds = new Set(items.map((item) => item.id));
+    return recommendations
+      .filter((item) => item.mealType === slotType && !cartIds.has(item.id))
+      .sort((left, right) => Number(right.itemKind === "ADD_ON") - Number(left.itemKind === "ADD_ON"))
+      .slice(0, 6);
+  }, [items, recommendations, slotType]);
 
   const deliveryPreview = useMemo(() => {
     if (isManualDeliveryReview) {
@@ -230,9 +258,15 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
     }
 
     if (nextFile.size <= 0 || nextFile.size > paymentProofMaxBytes) {
-      setError("Attachment must be smaller than 6 MB.");
+      setError("Please use a payment screenshot smaller than 5 MB.");
       return;
     }
+    if (!paymentProofTypes.has(nextFile.type)) {
+      setError("Please use a JPG, PNG, or WebP payment screenshot.");
+      return;
+    }
+
+    const preparedFile = await compressPaymentProof(nextFile);
 
     const uploadRequestId = latestUploadRequest.current + 1;
     latestUploadRequest.current = uploadRequestId;
@@ -240,15 +274,17 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
     setError("");
 
     try {
-      const formData = new FormData();
-      formData.append("file", nextFile);
-
       const uploadResponse = await fetch("/api/uploads/payment-proof", {
         method: "POST",
-        body: formData
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName: preparedFile.name,
+          contentType: preparedFile.type,
+          size: preparedFile.size
+        })
       });
       const responseText = await uploadResponse.text();
-      let uploadResult: { ok?: boolean; url?: string; analysis?: PaymentProofAnalysis; error?: string };
+      let uploadResult: { ok?: boolean; uploadUrl?: string; url?: string; analysis?: PaymentProofAnalysis; error?: string };
 
       try {
         uploadResult = JSON.parse(responseText);
@@ -256,28 +292,16 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
         uploadResult = { ok: false };
       }
 
-      if (!uploadResponse.ok || !uploadResult.ok || !uploadResult.url || !uploadResult.analysis) {
-        const fallbackUrl = await fileToDataUrl(nextFile);
-        const fallbackAnalysis: PaymentProofAnalysis = {
-          verdict: "NEEDS_MANUAL_REVIEW",
-          confidence: 0.5,
-          summary: "Attachment received",
-          reasons: ["Stored directly with the order because upload service was unavailable."],
-          mimeType: nextFile.type || "application/octet-stream",
-          fileSizeKb: Math.round((nextFile.size / 1024) * 10) / 10
-        };
-
-        if (latestUploadRequest.current !== uploadRequestId) {
-          return;
-        }
-
-        setUploadedProof({
-          url: fallbackUrl,
-          analysis: fallbackAnalysis,
-          fileName: nextFile.name
-        });
-        return;
+      if (!uploadResponse.ok || !uploadResult.ok || !uploadResult.uploadUrl || !uploadResult.url || !uploadResult.analysis) {
+        throw new Error(uploadResult.error || "Could not prepare payment screenshot upload.");
       }
+
+      const r2Response = await fetch(uploadResult.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": preparedFile.type },
+        body: preparedFile
+      });
+      if (!r2Response.ok) throw new Error("Could not upload payment screenshot.");
 
       if (latestUploadRequest.current !== uploadRequestId) {
         return;
@@ -290,24 +314,8 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
       });
     } catch (uploadError) {
       if (latestUploadRequest.current === uploadRequestId) {
-        try {
-          const fallbackUrl = await fileToDataUrl(nextFile);
-          setUploadedProof({
-            url: fallbackUrl,
-            analysis: {
-              verdict: "NEEDS_MANUAL_REVIEW",
-              confidence: 0.5,
-              summary: "Attachment received",
-              reasons: ["Stored directly with the order because upload service was unavailable."],
-              mimeType: nextFile.type || "application/octet-stream",
-              fileSizeKb: Math.round((nextFile.size / 1024) * 10) / 10
-            },
-            fileName: nextFile.name
-          });
-        } catch {
-          setUploadedProof(null);
-          setError(uploadError instanceof Error ? uploadError.message : "Could not prepare attachment.");
-        }
+        setUploadedProof(null);
+        setError(uploadError instanceof Error ? uploadError.message : "Could not upload payment screenshot.");
       }
     } finally {
       if (latestUploadRequest.current === uploadRequestId) {
@@ -504,7 +512,6 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
                     height={512}
                     className="mt-4 h-auto w-full rounded-[24px] border border-border bg-white"
                     sizes="(min-width: 1024px) 24vw, (min-width: 768px) 30vw, 100vw"
-                    priority
                     unoptimized
                   />
                   <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-stone-700">
@@ -526,10 +533,12 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
                   <div className="mt-5 space-y-4">
                     <input
                       type="file"
+                      accept="image/png,image/jpeg,image/webp"
                       className="block w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm"
                       onChange={(event) => handlePaymentProofChange(event.target.files?.[0] ?? null)}
                       required
                     />
+                    <p className="text-xs text-stone-500">JPG, PNG, or WebP smaller than 5 MB.</p>
                     {uploadingProof ? (
                       <p className="text-xs text-stone-500">Uploading and checking your screenshot…</p>
                     ) : uploadedProof ? (
@@ -641,6 +650,44 @@ export function CheckoutPage({ settings, slotState }: CheckoutPageProps) {
               </p>
             ) : null}
           </div>
+
+          {suggestedItems.length ? (
+            <div className="mt-6">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-stone-900">Make your meal more satisfying</p>
+                  <p className="mt-1 text-xs text-stone-500">Popular add-ons and matching thalis, ready in one tap.</p>
+                </div>
+              </div>
+              <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">
+                {suggestedItems.map((item) => (
+                  <article key={item.id} className="min-w-[190px] snap-start rounded-3xl border border-border bg-[#fffaf5] p-3">
+                    <Image
+                      src={item.imageUrl}
+                      alt={item.name}
+                      width={320}
+                      height={220}
+                      className="h-24 w-full rounded-2xl object-cover"
+                      sizes="190px"
+                    />
+                    <p className="mt-3 truncate text-sm font-semibold">{item.name}</p>
+                    <div className="mt-1 flex items-center justify-between gap-2 text-xs">
+                      <span className="text-stone-500">{item.badge}</span>
+                      <span className="font-semibold text-primary">{formatCurrency(item.price)}</span>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="mt-3 w-full"
+                      onClick={() => addItem(item)}
+                    >
+                      Add to order
+                    </Button>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </Card>
       </div>
       {confirmationOrderNumber ? (

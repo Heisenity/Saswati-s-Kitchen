@@ -124,7 +124,7 @@ function hasAllowedExtension(fileName: string, allowedExtensions: string[]) {
 
 function matchesFileSignature(bytes: Uint8Array, mimeType: string) {
   if (mimeType === "image/jpeg") {
-    return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[bytes.length - 2] === 0xff && bytes[bytes.length - 1] === 0xd9;
+    return bytes[0] === 0xff && bytes[1] === 0xd8;
   }
 
   if (mimeType === "image/png") {
