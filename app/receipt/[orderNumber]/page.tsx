@@ -44,9 +44,9 @@ export default async function ReceiptPage({
         <Header />
         <div className="section-padding">
           <div className="mx-auto max-w-4xl">
-            <Card className="p-8">
+            <Card className="min-w-0 p-4 sm:p-8">
               <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Receipt</p>
-              <h1 className="mt-4 font-serif text-4xl">Order confirmed for manual verification</h1>
+              <h1 className="mt-4 break-words font-serif text-3xl leading-tight sm:text-4xl">Order confirmed for manual verification</h1>
               <div className="mt-8 grid gap-4 md:grid-cols-2">
                 <Detail label="Order ID" value={order.orderNumber} />
                 <Detail label="Date / time" value={<ReceiptDateTime value={order.createdAt.toISOString()} />} />
@@ -64,9 +64,9 @@ export default async function ReceiptPage({
                   {order.items.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between rounded-2xl bg-muted px-4 py-3 text-sm"
+                      className="flex min-w-0 items-start justify-between gap-3 rounded-2xl bg-muted px-4 py-3 text-sm"
                     >
-                      <span>
+                      <span className="min-w-0 break-words">
                         {item.itemName} x{item.quantity}
                       </span>
                       <span>{formatCurrency(item.totalPrice)}</span>

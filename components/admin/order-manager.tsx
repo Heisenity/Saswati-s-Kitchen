@@ -85,19 +85,19 @@ export function OrderManager({ initialOrders }: { initialOrders: OrderRow[] }) {
         ))}
       </div>
       {visibleOrders.map((order) => (
-        <Card key={order.id} className="p-6">
+        <Card key={order.id} className="min-w-0 p-4 sm:p-6">
           {(() => {
             const manualDeliveryReview = order.distanceKm == null;
 
             return (
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">{order.orderNumber}</p>
               <h3 className="mt-2 font-serif text-2xl">{order.customerName}</h3>
               <p className="mt-2 text-sm text-stone-600">
                 {order.phone} · {order.slotType} · {formatDateTime(order.createdAt)}
               </p>
-              <p className="mt-3 text-sm text-stone-700">{order.address}</p>
+              <p className="mt-3 break-words text-sm text-stone-700">{order.address}</p>
               {order.landmark ? (
                 <p className="mt-1 text-xs text-stone-500">Landmark: {order.landmark}</p>
               ) : null}
@@ -171,7 +171,7 @@ export function OrderManager({ initialOrders }: { initialOrders: OrderRow[] }) {
                 </div>
               ) : null}
             </div>
-            <div className="w-full max-w-xs rounded-3xl border border-border bg-white p-4">
+            <div className="w-full rounded-3xl border border-border bg-white p-4 lg:max-w-xs">
               <p className="text-sm font-semibold">Update status</p>
               <select
                 className="mt-3 h-11 w-full rounded-2xl border border-border px-3 text-sm"

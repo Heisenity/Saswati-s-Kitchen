@@ -10,7 +10,15 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { MAX_DELIVERY_DISTANCE_KM, calculateDeliveryCharge, haversineDistanceKm } from "@/lib/delivery";
+import {
+  MAX_DELIVERY_DISTANCE_KM,
+  calculateDeliveryCharge,
+  getFreeDeliveryProgress,
+  getFreeDeliveryThreshold,
+  getRemainingAmount,
+  getSuggestedAddOns,
+  haversineDistanceKm
+} from "@/lib/delivery";
 import type { PaymentProofAnalysis } from "@/lib/payment-proof";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -82,7 +90,7 @@ async function compressPaymentProof(file: File) {
 
 export function CheckoutPage({ settings, slotState, recommendations }: CheckoutPageProps) {
   const router = useRouter();
-  const { items, subtotal, addItem, clearCart } = useCart();
+  const { items, subtotal, addItem, clearCart, setDeliveryDistanceKm } = useCart();
   const [customerName, setCustomerName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -156,6 +164,29 @@ export function CheckoutPage({ settings, slotState, recommendations }: CheckoutP
   const outOfRange =
     deliveryPreview.distanceKm !== null &&
     deliveryPreview.distanceKm > MAX_DELIVERY_DISTANCE_KM;
+  const freeDeliveryThreshold =
+    deliveryPreview.distanceKm === null
+      ? null
+      : getFreeDeliveryThreshold(deliveryPreview.distanceKm);
+  const remainingAmount =
+    freeDeliveryThreshold === null
+      ? null
+      : getRemainingAmount(subtotal, freeDeliveryThreshold);
+  const suggestedAddOns = useMemo(
+    () => getSuggestedAddOns(remainingAmount ?? 0, suggestedItems),
+    [remainingAmount, suggestedItems]
+  );
+
+  useEffect(() => {
+    setDeliveryDistanceKm(
+      !isManualDeliveryReview && !outOfRange ? deliveryPreview.distanceKm : null
+    );
+  }, [
+    deliveryPreview.distanceKm,
+    isManualDeliveryReview,
+    outOfRange,
+    setDeliveryDistanceKm
+  ]);
 
   function detectLocation() {
     if (!navigator.geolocation) {
@@ -659,6 +690,59 @@ export function CheckoutPage({ settings, slotState, recommendations }: CheckoutP
               </p>
             ) : null}
           </div>
+
+          {freeDeliveryThreshold !== null && remainingAmount !== null && !outOfRange ? (
+            <div className="mt-6 rounded-3xl border border-[#eadfd3] bg-gradient-to-br from-[#fffdfb] to-[#fff4e7] p-4 sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="min-w-0 break-words font-semibold leading-6 text-stone-900">
+                  {remainingAmount > 0
+                    ? `Almost there! Add ${formatCurrency(remainingAmount)} more and we’ll deliver it free 🎉`
+                    : "Free Delivery Unlocked 🎉"}
+                </p>
+                <span className="text-sm font-semibold text-primary">
+                  {formatCurrency(subtotal)} / {formatCurrency(freeDeliveryThreshold)}
+                </span>
+              </div>
+              <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[#eadfd3]">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-primary via-[#d08b2f] to-[#e7b63e] transition-[width] duration-300"
+                  style={{ width: `${getFreeDeliveryProgress(subtotal, freeDeliveryThreshold)}%` }}
+                />
+              </div>
+              {remainingAmount > 0 ? (
+                <>
+                  <p className="mt-3 text-sm text-stone-600">Add food, not delivery fee.</p>
+                  {suggestedAddOns.length ? (
+                    <div className="mt-4">
+                      <p className="text-sm font-semibold">Unlock free delivery with:</p>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {suggestedAddOns.map((item, index) => (
+                          <div
+                            key={item.id}
+                            className="flex min-w-0 flex-col items-stretch gap-3 rounded-2xl border border-[#eadfd3] bg-white/80 p-3 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">{item.name}</p>
+                              <p className="text-xs text-stone-500">
+                                {item.itemKind === "THALI"
+                                  ? "Popular Thali"
+                                  : index === 0 && remainingAmount > 30
+                                    ? "Best with Thali"
+                                    : "Most Added"} · {formatCurrency(item.price)}
+                              </p>
+                            </div>
+                            <Button type="button" size="sm" className="w-full min-[380px]:w-auto" onClick={() => addItem(item)}>
+                              Add
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
+            </div>
+          ) : null}
 
           {suggestedItems.length ? (
             <div className="mt-6">

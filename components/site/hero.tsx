@@ -14,7 +14,7 @@ export function Hero() {
       <div className="mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[0.98fr_1.02fr]">
         <div className="relative">
           <Badge>Cooked fresh daily</Badge>
-          <h1 className="mt-5 max-w-2xl font-serif text-4xl leading-[0.95] text-foreground sm:text-5xl lg:text-[5.1rem]">
+          <h1 className="mt-5 max-w-2xl break-words font-serif text-[2.55rem] leading-[0.98] text-foreground sm:text-5xl lg:text-[5.1rem]">
             Fresh Homemade Bengali Meals, Delivered Daily
           </h1>
           <p className="mt-5 max-w-xl text-base leading-8 text-stone-700 sm:text-lg">
@@ -28,8 +28,8 @@ export function Hero() {
         </div>
 
         <div className="surface bridge-grid relative overflow-hidden p-4 sm:p-5">
-          <div className="absolute inset-x-4 top-4 z-10 flex justify-end sm:inset-x-5 sm:top-5">
-            <Badge className="max-w-[16rem] whitespace-normal bg-mustard/25 px-4 py-2 text-right leading-tight text-foreground sm:max-w-[22rem]">
+          <div className="absolute inset-x-6 top-6 z-10 flex justify-end sm:inset-x-7 sm:top-7">
+            <Badge className="max-w-[calc(100%-1rem)] whitespace-normal bg-mustard/90 px-3 py-1.5 text-right text-[10px] leading-tight text-foreground shadow-sm sm:max-w-[22rem] sm:px-4 sm:py-2 sm:text-xs">
               Premium Bengali Lunch
             </Badge>
           </div>
@@ -43,7 +43,7 @@ export function Hero() {
             quality={84}
             priority
           />
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="mt-4 grid gap-3 min-[380px]:grid-cols-2">
             <div className="rounded-3xl bg-white p-3.5">
               <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Freshness</p>
               <p className="mt-1.5 font-serif text-xl sm:text-2xl">Limited Slots</p>

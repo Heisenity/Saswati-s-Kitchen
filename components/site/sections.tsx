@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DELIVERY_SLABS } from "@/lib/delivery";
 import { cn } from "@/lib/utils";
 
 const orderingSteps = [
@@ -57,7 +58,7 @@ const orderingSteps = [
 
 export function DeliveryRules() {
   return (
-    <section id="delivery" className="section-padding bg-gradient-to-b from-[#f8f2ea] via-[#fbf7f2] to-[#f6efe6] pt-0">
+    <section id="delivery" className="deferred-section section-padding bg-gradient-to-b from-[#f8f2ea] via-[#fbf7f2] to-[#f6efe6] pt-0">
       <div className="mx-auto max-w-7xl space-y-8">
         <Card className="relative overflow-hidden rounded-[32px] border border-[#eadfd3] bg-white/90 p-6 shadow-[0_20px_60px_rgba(60,35,20,0.08)] backdrop-blur sm:p-8 lg:p-10">
           <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-[#f1d7b8]/30 blur-3xl" />
@@ -70,27 +71,25 @@ export function DeliveryRules() {
             <p className="mt-4 max-w-2xl text-sm leading-7 text-stone-600 sm:text-base">
               Order a little more and enjoy better value on every meal. Free delivery unlocks automatically based on your location and cart value.
             </p>
-            <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              {[
-                { title: "Up to 1 km", headline: "Free delivery on orders ₹99+", description: "Perfect for quick nearby orders." },
-                { title: "Up to 2 km", headline: "Free delivery on orders ₹139+", description: "Add a little more and unlock better value." },
-                { title: "Above 2 km", headline: "Free delivery on orders ₹350+", description: "Best for family or group orders." }
-              ].map((item) => (
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {DELIVERY_SLABS.map((slab) => (
                 <div
-                  key={item.title}
+                  key={slab.maxDistanceKm}
                   className="group relative overflow-hidden rounded-[28px] border border-[#eadfd3] bg-gradient-to-b from-white to-[#fffaf5] p-5 shadow-[0_20px_60px_rgba(60,35,20,0.08)] transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(184,59,47,0.12)]"
                 >
                   <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#b83b2f] via-[#d08b2f] to-[#f0c36b]" />
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-stone-900">{item.title}</p>
-                      <p className="mt-3 text-xl font-semibold leading-snug text-[#b83b2f]">{item.headline}</p>
+                      <p className="text-sm font-semibold text-stone-900">Up to {slab.maxDistanceKm} km</p>
+                      <p className="mt-3 text-xl font-semibold leading-snug text-[#b83b2f]">
+                        Free delivery on orders ₹{slab.freeDeliveryThreshold}+
+                      </p>
                     </div>
                     <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#fff3e7] text-[#b83b2f] transition-transform duration-300 group-hover:scale-105">
                       <MapPin className="h-5 w-5" />
                     </div>
                   </div>
-                  <p className="mt-3 text-sm text-stone-600">{item.description}</p>
+                  <p className="mt-3 text-sm text-stone-600">Smart value for your delivery distance.</p>
                 </div>
               ))}
             </div>
@@ -176,7 +175,7 @@ export function TimingSection({ label }: { label: string }) {
   ];
 
   return (
-    <section id="timing" className="section-padding bg-gradient-to-b from-[#f8f2ea] via-[#fbf7f2] to-[#f6efe6] pt-0">
+    <section id="timing" className="deferred-section section-padding bg-gradient-to-b from-[#f8f2ea] via-[#fbf7f2] to-[#f6efe6] pt-0">
       <div className="mx-auto grid max-w-7xl gap-8 xl:grid-cols-[0.95fr_1.05fr]">
         <Card className="relative overflow-hidden rounded-[32px] border border-[#eadfd3] bg-white/90 p-6 shadow-[0_20px_60px_rgba(60,35,20,0.08)] backdrop-blur sm:p-8 lg:p-10">
           <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-[#f1d7b8]/30 blur-3xl" />
@@ -281,12 +280,12 @@ export function TimingSection({ label }: { label: string }) {
 
 export function SupportSection() {
   return (
-    <section id="support" className="section-padding pt-0">
+    <section id="support" className="deferred-section section-padding pt-0">
       <div className="mx-auto max-w-7xl">
-        <Card className="grid gap-8 bg-[#fbefe8] p-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+        <Card className="grid min-w-0 gap-8 bg-[#fbefe8] p-4 sm:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Need help?</p>
-            <h3 className="mt-4 max-w-xl font-serif text-4xl">Need help? Chat with us instantly.</h3>
+            <h3 className="mt-4 max-w-xl break-words font-serif text-3xl sm:text-4xl">Need help? Chat with us instantly.</h3>
             <p className="mt-4 max-w-xl text-sm leading-7 text-stone-700">
               Tap chat to message us instantly, or reach us directly by call or email for quick help with ordering.
             </p>

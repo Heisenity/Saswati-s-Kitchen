@@ -32,6 +32,7 @@ type MenuSectionProps = {
 type VisibleMealType = "LUNCH" | "DINNER";
 
 export function MenuSection({ items }: MenuSectionProps) {
+  const { setAvailableAddOns } = useCart();
   const [authNext, setAuthNext] = useState("/");
   const [authOpen, setAuthOpen] = useState(false);
   const [mealType, setMealType] = useState<VisibleMealType>("LUNCH");
@@ -39,6 +40,19 @@ export function MenuSection({ items }: MenuSectionProps) {
     .filter((item) => item.itemKind === "THALI" && item.mealType === mealType)
     .sort((a, b) => Number(b.badge.includes("Combo Offer")) - Number(a.badge.includes("Combo Offer")));
   const addOns = items.filter((item) => item.itemKind === "ADD_ON" && item.mealType === mealType);
+
+  useEffect(() => {
+    setAvailableAddOns(
+      [...thalis, ...addOns].map(({ id, name, price, imageUrl, badge, itemKind }) => ({
+        id,
+        name,
+        price,
+        imageUrl,
+        badge,
+        itemKind
+      }))
+    );
+  }, [items, mealType, setAvailableAddOns]);
 
   useEffect(() => {
     const requestedMenu = new URLSearchParams(window.location.search).get("menu")?.toUpperCase();

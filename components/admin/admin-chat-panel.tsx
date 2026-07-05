@@ -510,8 +510,8 @@ export function AdminChatPanel() {
     typingState.senderType === "CUSTOMER";
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
-      <Card className="p-4">
+    <div className="grid min-w-0 gap-6 xl:grid-cols-[340px_1fr]">
+      <Card className="min-w-0 p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="font-serif text-2xl">Conversations</p>
@@ -560,7 +560,7 @@ export function AdminChatPanel() {
         </div>
       </Card>
 
-      <Card className="flex min-h-[720px] flex-col overflow-hidden p-0">
+      <Card className="flex min-h-[65dvh] min-w-0 flex-col overflow-hidden p-0 md:min-h-[720px]">
         <div className="border-b border-border px-5 py-4">
           <p className="font-serif text-2xl">{activeThread?.customerName ?? "Select a thread"}</p>
           {activeThread ? (
@@ -599,7 +599,7 @@ export function AdminChatPanel() {
             <span>Send reply or attachment</span>
             <span>JPG, PNG, PDF up to 5MB</span>
           </div>
-          <div className="flex gap-2">
+          <div className="flex min-w-0 gap-2">
             <button
               type="button"
               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"

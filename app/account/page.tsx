@@ -24,11 +24,11 @@ export default async function AccountPage() {
       <div className="section-padding">
         <div className="mx-auto grid max-w-5xl gap-6">
           {user ? (
-            <Card className="p-8">
+            <Card className="min-w-0 p-4 sm:p-8">
               <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">
                 Account
               </p>
-              <h1 className="mt-3 font-serif text-4xl">Your orders and profile</h1>
+              <h1 className="mt-3 break-words font-serif text-3xl sm:text-4xl">Your orders and profile</h1>
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <Info label="Email" value={user.email ?? "No email"} />
                 <Info label="Role" value={isWhitelistedAdminEmail(user.email) ? "ADMIN" : "USER"} />
@@ -48,13 +48,13 @@ export default async function AccountPage() {
           )}
 
           {user ? (
-            <Card className="p-8">
+            <Card className="min-w-0 p-4 sm:p-8">
               <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">My orders</p>
               <h2 className="mt-3 font-serif text-3xl">Orders placed while signed in</h2>
               <div className="mt-6 max-h-[70vh] space-y-4 overflow-y-auto pr-1">
                 {orders.length ? (
                   orders.map((order) => (
-                    <div key={order.id} className="rounded-3xl border border-border bg-muted p-5">
+                    <div key={order.id} className="min-w-0 rounded-3xl border border-border bg-muted p-4 sm:p-5">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                           <p className="font-semibold text-foreground">{order.orderNumber}</p>

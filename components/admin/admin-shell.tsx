@@ -19,21 +19,21 @@ export function AdminShell({
     <div className="min-h-screen bg-[#f9efe3]">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-          <aside className="surface h-fit w-full p-4 lg:w-72">
+          <aside className="surface h-fit w-full min-w-0 p-4 lg:w-72 lg:shrink-0">
             <p className="font-serif text-2xl">Saswati’s Kitchen</p>
             <p className="mt-2 text-sm text-stone-600">Admin dashboard</p>
-            <nav className="mt-6 grid gap-2">
+            <nav className="mt-5 flex gap-2 overflow-x-auto pb-1 lg:mt-6 lg:grid lg:overflow-visible lg:pb-0">
               {links.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="rounded-2xl px-4 py-3 text-sm font-medium transition hover:bg-muted"
+                  className="shrink-0 rounded-2xl px-4 py-3 text-sm font-medium transition hover:bg-muted lg:shrink"
                 >
                   {link.label}
                 </Link>
               ))}
             </nav>
-            <form className="mt-6" action="/auth/signout" method="post">
+            <form className="mt-4 lg:mt-6" action="/auth/signout" method="post">
               <button className="w-full rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold">
                 Logout
               </button>
@@ -42,7 +42,7 @@ export function AdminShell({
 
           <main className="min-w-0 flex-1">
             <div className="mb-6">
-              <h1 className="font-serif text-4xl">{title}</h1>
+              <h1 className="break-words font-serif text-3xl sm:text-4xl">{title}</h1>
             </div>
             {children}
           </main>

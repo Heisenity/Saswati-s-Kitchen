@@ -25,12 +25,27 @@ body {
     linear-gradient(180deg, rgba(255, 250, 241, 0.98), rgba(255, 248, 239, 1));
 }
 
+img,
+picture,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+input,
+textarea,
+select,
+button {
+  max-width: 100%;
+}
+
 .surface {
   @apply rounded-[28px] border border-border bg-card shadow-warm;
 }
 
 .section-padding {
-  @apply px-4 py-16 sm:px-6 lg:px-8 lg:py-24;
+  @apply px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-24;
 }
 
 .bridge-grid {
@@ -38,6 +53,11 @@ body {
     linear-gradient(rgba(181, 30, 30, 0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(181, 30, 30, 0.05) 1px, transparent 1px);
   background-size: 28px 28px;
+}
+
+.deferred-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
 }
 
 @keyframes bell-ring {

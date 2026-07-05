@@ -5,7 +5,7 @@ const items = [
   { label: "Hygienic Packing", icon: ShieldCheck },
   { label: "Daily Menu", icon: BadgeCheck },
   { label: "Limited Slots", icon: Clock3 },
-  { label: "Free Delivery Rules", icon: Truck },
+  { label: "Free Delivery", icon: Truck },
   { label: "Homely Taste", icon: Leaf }
 ];
 
