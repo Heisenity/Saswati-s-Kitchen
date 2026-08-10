@@ -275,7 +275,7 @@ VALUES
   ('pabda-thali', 'Pabda Thali', 'pabda-thali', 'Authentic Bengali sorshe pabda taste.', 159, '/brand/pabda-thali.svg', 'LUNCH', 'Traditional Favorite', true, 16, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
   ('chicken-thali', 'Chicken Thali', 'chicken-thali', 'Everyday comfort with homestyle chicken curry.', 149, '/brand/chicken-thali.svg', 'LUNCH', 'Most Loved', true, 24, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
   ('katlaa-macher-thali', 'Katlaa Macher Thali', 'katlaa-macher-thali', 'Balanced Bengali fish thali at a great price.', 139, '/brand/katlaa-thali.svg', 'LUNCH', 'Value Choice', true, 22, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-  ('rui-macher-thali', 'Rui Macher Thali', 'rui-macher-thali', 'Classic rui macher kalia, perfect for regular lunch.', 119, '/brand/rui-thali.svg', 'LUNCH', 'Best Seller', true, 30, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('rui-macher-thali', 'Rui Macher Thali', 'rui-macher-thali', 'Classic rui macher kalia, perfect for regular lunch.', 119, '/brand/rui-thali.jpg', 'LUNCH', 'Best Seller', true, 30, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
   ('egg-thali', 'Egg Thali', 'egg-thali', 'Simple, filling and affordable home-style meal.', 89, '/brand/egg-thali.svg', 'LUNCH', 'Budget Favorite', true, 25, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
   ('veg-thali', 'Veg Thali', 'veg-thali', 'Fresh vegetarian Bengali meal for everyday eating.', 79, '/brand/veg-thali.svg', 'LUNCH', 'Light & Comforting', true, 26, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
   ('special-veg-thali', 'Special Veg Thali', 'special-veg-thali', 'Our classic veg thali with paneer curry and dhokar dalna.', 119, '/brand/special-veg-thali.png', 'LUNCH', 'Special Veg', true, 20, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)

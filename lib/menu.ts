@@ -3,20 +3,28 @@ import { isPrismaConnectionError, prisma } from "@/lib/prisma";
 import { defaultMenuItems } from "@/lib/default-data";
 import { isDatabaseConfigured } from "@/lib/env";
 
+function useCurrentRuiPhoto<T extends { id: string; imageUrl: string }>(item: T) {
+  return item.id === "rui-macher-thali"
+    ? { ...item, imageUrl: "/brand/rui-thali.jpg" }
+    : item;
+}
+
 function getFallbackMenuItems() {
-  return defaultMenuItems.map((item) => ({
-    ...item,
-    id: item.slug,
-    isActive: true,
-    availableDate: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    components: item.components.map((component, index) => ({
-      id: `${item.slug}-${index}`,
-      menuItemId: item.slug,
-      itemName: component
-    }))
-  }));
+  return defaultMenuItems.map((item) =>
+    useCurrentRuiPhoto({
+      ...item,
+      id: item.slug,
+      isActive: true,
+      availableDate: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      components: item.components.map((component, index) => ({
+        id: `${item.slug}-${index}`,
+        menuItemId: item.slug,
+        itemName: component
+      }))
+    })
+  );
 }
 
 async function loadMenuItems() {
@@ -25,7 +33,7 @@ async function loadMenuItems() {
   }
 
   try {
-    return await prisma.menuItem.findMany({
+    const menuItems = await prisma.menuItem.findMany({
       where: { isActive: true },
       orderBy: [{ price: "desc" }],
       select: {
@@ -44,6 +52,7 @@ async function loadMenuItems() {
         }
       }
     });
+    return menuItems.map(useCurrentRuiPhoto);
   } catch (error) {
     if (isPrismaConnectionError(error)) return getFallbackMenuItems();
     throw error;
@@ -63,10 +72,11 @@ export async function getAdminMenuItems() {
   if (!isDatabaseConfigured()) return getFallbackMenuItems();
 
   try {
-    return await prisma.menuItem.findMany({
+    const menuItems = await prisma.menuItem.findMany({
       orderBy: [{ createdAt: "desc" }],
       include: { components: true }
     });
+    return menuItems.map(useCurrentRuiPhoto);
   } catch (error) {
     if (isPrismaConnectionError(error)) return getFallbackMenuItems();
     throw error;
