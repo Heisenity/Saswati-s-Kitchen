@@ -25,6 +25,7 @@ export type CreateOrderInput = {
   locationConfidence?: number;
   userId?: string;
   customerName: string;
+  customerEmail: string;
   phone: string;
   address: string;
   landmark?: string;
@@ -120,6 +121,7 @@ export async function createOrder(input: CreateOrderInput) {
     checkoutToken: input.checkoutToken || randomUUID(),
     userId: input.userId,
     customerName: input.customerName,
+    customerEmail: input.customerEmail?.trim().toLowerCase() || null,
     phone: normalizedPhone,
     address: input.address,
     landmark: input.landmark,
@@ -157,9 +159,9 @@ export async function createOrder(input: CreateOrderInput) {
       }
     });
   } catch (error) {
-    if (input.userId && isPrismaSchemaMismatchError(error)) {
-      // ponytail: old DBs may still miss Order.userId; retry without account-linking until migration is applied
-      const { userId: _userId, ...legacyOrderData } = orderData;
+    if ((input.userId || input.customerEmail) && isPrismaSchemaMismatchError(error)) {
+      // ponytail: old DBs may still miss new account/contact columns; keep checkout alive until migrations are applied
+      const { userId: _userId, customerEmail: _customerEmail, ...legacyOrderData } = orderData;
       order = await prisma.order.create({
         data: legacyOrderData,
         include: {

@@ -7,6 +7,7 @@ const adminOrderSelect = {
   id: true,
   orderNumber: true,
   customerName: true,
+  customerEmail: true,
   phone: true,
   address: true,
   landmark: true,

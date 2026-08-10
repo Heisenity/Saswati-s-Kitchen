@@ -9,6 +9,7 @@ type OrderRow = {
   id: string;
   orderNumber: string;
   customerName: string;
+  customerEmail: string | null;
   phone: string;
   address: string;
   landmark: string | null;
@@ -97,6 +98,9 @@ export function OrderManager({ initialOrders }: { initialOrders: OrderRow[] }) {
               <p className="mt-2 text-sm text-stone-600">
                 {order.phone} · {order.slotType} · {formatDateTime(order.createdAt)}
               </p>
+              {order.customerEmail ? (
+                <p className="mt-1 break-words text-sm text-stone-600">{order.customerEmail}</p>
+              ) : null}
               <p className="mt-3 break-words text-sm text-stone-700">{order.address}</p>
               {order.landmark ? (
                 <p className="mt-1 text-xs text-stone-500">Landmark: {order.landmark}</p>

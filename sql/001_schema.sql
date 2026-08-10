@@ -47,6 +47,7 @@ create table if not exists "Order" (
   "checkoutToken" text not null unique,
   "userId" text,
   "customerName" text not null,
+  "customerEmail" text,
   phone text not null,
   address text not null,
   landmark text,

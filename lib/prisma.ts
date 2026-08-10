@@ -67,6 +67,7 @@ type OrderRow = {
   checkoutToken: string;
   userId: string | null;
   customerName: string;
+  customerEmail: string | null;
   phone: string;
   address: string;
   landmark: string | null;
@@ -284,6 +285,7 @@ async function loadOrders(whereSql = "", values: unknown[] = [], options?: { tak
         "checkoutToken" as "checkoutToken",
         "userId" as "userId",
         "customerName" as "customerName",
+        "customerEmail" as "customerEmail",
         phone,
         address,
         landmark,
@@ -758,6 +760,7 @@ export const prisma = {
               "checkoutToken",
               "userId",
               "customerName",
+              "customerEmail",
               phone,
               address,
               landmark,
@@ -778,7 +781,7 @@ export const prisma = {
               "updatedAt"
             )
             values (
-              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, now(), now()
+              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, now(), now()
             )
           `,
           [
@@ -787,6 +790,7 @@ export const prisma = {
             data.checkoutToken,
             data.userId ?? null,
             data.customerName,
+            data.customerEmail ?? null,
             data.phone,
             data.address,
             data.landmark ?? null,

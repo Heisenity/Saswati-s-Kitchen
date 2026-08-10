@@ -21,6 +21,8 @@ export const env = {
     process.env.ADMIN_EMAIL_ALLOWLIST ??
     "insightsnode@gmail.com,senpintu95@gmail.com,saswatisen1980@gmail.com",
   supabaseProjectRef: process.env.SUPABASE_PROJECT_REF ?? "ovmvmjgutbdtkxnzkvpb",
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  supabaseStorageBucket: process.env.SUPABASE_STORAGE_BUCKET ?? "payment-proofs",
   r2AccountId: process.env.R2_ACCOUNT_ID,
   r2AccessKeyId: process.env.R2_ACCESS_KEY_ID,
   r2SecretAccessKey: process.env.R2_SECRET_ACCESS_KEY,

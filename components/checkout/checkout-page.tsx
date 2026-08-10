@@ -23,6 +23,7 @@ import type { PaymentProofAnalysis } from "@/lib/payment-proof";
 import { cn, formatCurrency } from "@/lib/utils";
 
 type CheckoutPageProps = {
+  initialCustomerEmail?: string;
   settings: {
     kitchenLatitude: number;
     kitchenLongitude: number;
@@ -54,6 +55,14 @@ type UploadedPaymentProof = {
   url: string;
   fileName: string;
   analysis: PaymentProofAnalysis;
+};
+
+type PaymentProofUploadResult = {
+  ok?: boolean;
+  uploadUrl?: string;
+  url?: string;
+  analysis?: PaymentProofAnalysis;
+  error?: string;
 };
 
 type DeliveryQuote =
@@ -88,10 +97,57 @@ async function compressPaymentProof(file: File) {
   }
 }
 
-export function CheckoutPage({ settings, slotState, recommendations }: CheckoutPageProps) {
+async function parseUploadResponse(response: Response) {
+  const responseText = await response.text();
+
+  try {
+    return JSON.parse(responseText) as PaymentProofUploadResult;
+  } catch {
+    return { ok: false };
+  }
+}
+
+function getCustomerErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || "");
+  const lowerMessage = message.toLowerCase();
+
+  if (lowerMessage.includes("customeremail") || lowerMessage.includes("does not exist")) {
+    return "Checkout is being updated right now. Please call or WhatsApp us with your cart, and we will place the order for you.";
+  }
+
+  if (lowerMessage.includes("payment screenshot") || lowerMessage.includes("payment proof") || lowerMessage.includes("attachment")) {
+    return "We could not upload your payment screenshot. Please choose a clear JPG, PNG, or WebP image under 5 MB and try again.";
+  }
+
+  if (lowerMessage.includes("network") || lowerMessage.includes("fetch") || lowerMessage.includes("connect")) {
+    return "The connection dropped for a moment. Please check your internet and try again.";
+  }
+
+  if (lowerMessage.includes("email")) {
+    return "Please enter a valid email address for order updates.";
+  }
+
+  if (lowerMessage.includes("phone")) {
+    return "Please enter a valid phone number so we can confirm your order.";
+  }
+
+  if (lowerMessage.includes("cart is empty")) return "Your cart is empty. Please add an item before checkout.";
+  if (lowerMessage.includes("location") || lowerMessage.includes("address")) return message;
+  if (message && !message.includes("\"")) return message;
+
+  return "Something went wrong while placing your order. Please try again.";
+}
+
+export function CheckoutPage({
+  initialCustomerEmail = "",
+  settings,
+  slotState,
+  recommendations
+}: CheckoutPageProps) {
   const router = useRouter();
   const { items, subtotal, addItem, clearCart, setDeliveryDistanceKm } = useCart();
   const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState(initialCustomerEmail);
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [landmark, setLandmark] = useState("");
@@ -102,6 +158,7 @@ export function CheckoutPage({ settings, slotState, recommendations }: CheckoutP
   const [submitting, setSubmitting] = useState(false);
   const [locating, setLocating] = useState(false);
   const [error, setError] = useState("");
+  const [errorPopupOpen, setErrorPopupOpen] = useState(false);
   const [successNote, setSuccessNote] = useState("");
   const [confirmationOrderNumber, setConfirmationOrderNumber] = useState<string | null>(null);
   const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuote | null>(null);
@@ -177,6 +234,11 @@ export function CheckoutPage({ settings, slotState, recommendations }: CheckoutP
     [remainingAmount, suggestedItems]
   );
 
+  function showError(errorMessage: string) {
+    setError(errorMessage);
+    setErrorPopupOpen(true);
+  }
+
   useEffect(() => {
     setDeliveryDistanceKm(
       !isManualDeliveryReview && !outOfRange ? deliveryPreview.distanceKm : null
@@ -190,7 +252,7 @@ export function CheckoutPage({ settings, slotState, recommendations }: CheckoutP
 
   function detectLocation() {
     if (!navigator.geolocation) {
-      setError("Browser GPS is not available. Please enter your full address.");
+      showError("Browser GPS is not available. Please enter your full address.");
       return;
     }
 
@@ -219,7 +281,7 @@ export function CheckoutPage({ settings, slotState, recommendations }: CheckoutP
       }
 
       if (nextError) {
-        setError(nextError);
+        showError(nextError);
       }
     };
 
@@ -289,11 +351,11 @@ export function CheckoutPage({ settings, slotState, recommendations }: CheckoutP
     }
 
     if (nextFile.size <= 0 || nextFile.size > paymentProofMaxBytes) {
-      setError("Please use a payment screenshot smaller than 5 MB.");
+      showError("Please use a payment screenshot smaller than 5 MB.");
       return;
     }
     if (!paymentProofTypes.has(nextFile.type)) {
-      setError("Please use a JPG, PNG, or WebP payment screenshot.");
+      showError("Please use a JPG, PNG, or WebP payment screenshot.");
       return;
     }
 
@@ -305,35 +367,44 @@ export function CheckoutPage({ settings, slotState, recommendations }: CheckoutP
     setError("");
 
     try {
-      const uploadResponse = await fetch("/api/uploads/payment-proof", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileName: preparedFile.name,
-          contentType: preparedFile.type,
-          size: preparedFile.size
-        })
-      });
-      const responseText = await uploadResponse.text();
-      let uploadResult: { ok?: boolean; uploadUrl?: string; url?: string; analysis?: PaymentProofAnalysis; error?: string };
+      let uploadResult: PaymentProofUploadResult;
 
       try {
-        uploadResult = JSON.parse(responseText);
-      } catch {
-        uploadResult = { ok: false };
-      }
+        const uploadResponse = await fetch("/api/uploads/payment-proof", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileName: preparedFile.name,
+            contentType: preparedFile.type,
+            size: preparedFile.size
+          })
+        });
+        uploadResult = await parseUploadResponse(uploadResponse);
 
-      if (!uploadResponse.ok || !uploadResult.ok || !uploadResult.uploadUrl || !uploadResult.url || !uploadResult.analysis) {
-        throw new Error(uploadResult.error || "Could not prepare payment screenshot upload.");
-      }
+        if (!uploadResponse.ok || !uploadResult.ok || !uploadResult.uploadUrl || !uploadResult.url || !uploadResult.analysis) {
+          throw new Error(uploadResult.error || "Could not prepare payment screenshot upload.");
+        }
 
-      const r2Response = await fetch(uploadResult.uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": preparedFile.type },
-        body: preparedFile
-      });
-      if (!r2Response.ok) {
-        throw new Error("Could not upload payment screenshot. Please try once more.");
+        const r2Response = await fetch(uploadResult.uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": preparedFile.type },
+          body: preparedFile
+        });
+        if (!r2Response.ok) {
+          throw new Error("R2 browser upload failed.");
+        }
+      } catch (r2UploadError) {
+        console.warn("[payment-proof:r2-browser-upload-fallback]", r2UploadError);
+        const formData = new FormData();
+        formData.append("file", preparedFile);
+        const fallbackResponse = await fetch("/api/uploads/payment-proof", {
+          method: "POST",
+          body: formData
+        });
+        uploadResult = await parseUploadResponse(fallbackResponse);
+        if (!fallbackResponse.ok || !uploadResult.ok || !uploadResult.url || !uploadResult.analysis) {
+          throw new Error(uploadResult.error || "Could not upload payment screenshot. Please try once more.");
+        }
       }
 
       if (latestUploadRequest.current !== uploadRequestId) {
@@ -349,13 +420,7 @@ export function CheckoutPage({ settings, slotState, recommendations }: CheckoutP
       console.error("[payment-proof:browser-upload-failed]", uploadError);
       if (latestUploadRequest.current === uploadRequestId) {
         setUploadedProof(null);
-        setError(
-          uploadError instanceof TypeError
-            ? "Could not connect to secure image storage. Please refresh and try again."
-            : uploadError instanceof Error
-              ? uploadError.message
-              : "Could not upload payment screenshot."
-        );
+        showError(getCustomerErrorMessage(uploadError));
       }
     } finally {
       if (latestUploadRequest.current === uploadRequestId) {
@@ -370,7 +435,7 @@ export function CheckoutPage({ settings, slotState, recommendations }: CheckoutP
       setUpiCopied(true);
       window.setTimeout(() => setUpiCopied(false), 1500);
     } catch {
-      setError("Could not copy the UPI ID. You can still copy it manually.");
+      showError("Could not copy the UPI ID. You can still copy it manually.");
     }
   }
 
@@ -401,6 +466,7 @@ export function CheckoutPage({ settings, slotState, recommendations }: CheckoutP
           manualDeliveryReviewRequired: isManualDeliveryReview,
           deliveryChargeStatus: isManualDeliveryReview ? "PENDING_ADMIN_REVIEW" : undefined,
           customerName,
+          customerEmail,
           phone,
           address,
           landmark,
@@ -425,7 +491,7 @@ export function CheckoutPage({ settings, slotState, recommendations }: CheckoutP
       clearCart();
       setConfirmationOrderNumber(result.orderNumber);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Could not place order.");
+      showError(getCustomerErrorMessage(submitError));
     } finally {
       setSubmitting(false);
     }
@@ -438,11 +504,22 @@ export function CheckoutPage({ settings, slotState, recommendations }: CheckoutP
           <Card className="min-w-0 p-4 sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Checkout</p>
-                <h1 className="mt-3 font-serif text-3xl sm:text-4xl">Finish your order</h1>
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Fast checkout</p>
+                <h1 className="mt-3 font-serif text-3xl sm:text-4xl">Order without login</h1>
               </div>
               <Link href="/" className={cn(buttonVariants({ variant: "outline" }))}>
                 Back to home
+              </Link>
+            </div>
+
+            <div className="mt-5 rounded-3xl border border-border bg-muted px-4 py-4 text-sm text-stone-600">
+              <p className="font-semibold text-foreground">No account needed.</p>
+              <p className="mt-1">Add your phone and email, place the order, and track it later with your order ID.</p>
+              <Link
+                href="/auth/login?provider=google&next=%2Fcheckout&mode=user"
+                className={cn(buttonVariants({ variant: "outline" }), "mt-4 w-full sm:w-auto")}
+              >
+                Continue with Google
               </Link>
             </div>
 
@@ -454,15 +531,18 @@ export function CheckoutPage({ settings, slotState, recommendations }: CheckoutP
                 {successNote}
               </p>
             ) : null}
-            {error ? (
-              <p className="mt-4 rounded-3xl border border-primary/20 bg-primary/5 px-4 py-4 text-sm text-primary">
-                {error}
-              </p>
-            ) : null}
-
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <Input placeholder="Customer name" value={customerName} onChange={(event) => setCustomerName(event.target.value)} required />
               <Input placeholder="Phone number" value={phone} onChange={(event) => setPhone(event.target.value)} required />
+            </div>
+            <div className="mt-4">
+              <Input
+                type="email"
+                placeholder="Email for order updates"
+                value={customerEmail}
+                onChange={(event) => setCustomerEmail(event.target.value)}
+                required
+              />
             </div>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <Input placeholder="Landmark" value={landmark} onChange={(event) => setLandmark(event.target.value)} />
@@ -783,6 +863,28 @@ export function CheckoutPage({ settings, slotState, recommendations }: CheckoutP
           ) : null}
         </Card>
       </div>
+      {error && errorPopupOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/45 px-4"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="checkout-error-title"
+        >
+          <div className="w-full max-w-md rounded-[28px] border border-primary/20 bg-white p-6 shadow-2xl">
+            <p id="checkout-error-title" className="font-serif text-2xl text-foreground">
+              Please check this
+            </p>
+            <p className="mt-3 text-sm leading-7 text-stone-600">{error}</p>
+            <Button
+              type="button"
+              className="mt-6 w-full"
+              onClick={() => setErrorPopupOpen(false)}
+            >
+              OK
+            </Button>
+          </div>
+        </div>
+      ) : null}
       {confirmationOrderNumber ? (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-stone-950/45 px-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-[32px] border border-border bg-white/95 p-7 text-center shadow-[0_24px_80px_rgba(35,35,35,0.18)]">

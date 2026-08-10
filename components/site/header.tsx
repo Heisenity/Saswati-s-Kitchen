@@ -23,7 +23,7 @@ export function Header() {
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
         <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
           <Image
-            src="/brand/logo.jpg"
+            src="/brand/logo.svg?v=2"
             alt="Saswati's Kitchen logo"
             width={56}
             height={56}

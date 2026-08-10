@@ -10,6 +10,7 @@ export const orderSchema = z.object({
   geocodeProvider: z.string().min(2).optional(),
   locationConfidence: z.number().min(0).max(1).optional(),
   customerName: z.string().min(2),
+  customerEmail: z.string().email(),
   phone: z.string().min(10),
   address: z.string().min(8),
   landmark: z.string().optional(),

@@ -25,13 +25,9 @@ export async function POST(request: Request) {
       data: { user }
     } = await supabase.auth.getUser();
 
-    if (!user) {
-      return rejectJson(401, "Unauthorized");
-    }
-
     const order = await createOrder({
       ...payload,
-      userId: user.id
+      userId: user?.id
     });
 
     if ("customerName" in order) {

@@ -1,21 +1,26 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import Link from "next/link";
 import Image from "next/image";
-import { Plus, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { LocateFixed, MapPin, Minus, Plus, ShoppingBag } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useCart } from "@/components/cart/cart-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { createClient } from "@/lib/supabase/client";
+import {
+  MAX_DELIVERY_DISTANCE_KM,
+  calculateDeliveryCharge,
+  getDeliverySlab,
+  haversineDistanceKm
+} from "@/lib/delivery";
 import { formatCurrency } from "@/lib/utils";
 
-const CustomerAuthCard = dynamic(
-  () => import("@/components/auth/customer-auth-card").then((mod) => mod.CustomerAuthCard)
-);
-
 type MenuSectionProps = {
+  kitchenLocation: {
+    latitude: number;
+    longitude: number;
+  };
   items: Array<{
     id: string;
     name: string;
@@ -31,10 +36,8 @@ type MenuSectionProps = {
 
 type VisibleMealType = "LUNCH" | "DINNER";
 
-export function MenuSection({ items }: MenuSectionProps) {
-  const { setAvailableAddOns } = useCart();
-  const [authNext, setAuthNext] = useState("/");
-  const [authOpen, setAuthOpen] = useState(false);
+export function MenuSection({ items, kitchenLocation }: MenuSectionProps) {
+  const { setAvailableAddOns, setDeliveryDistanceKm } = useCart();
   const [mealType, setMealType] = useState<VisibleMealType>("LUNCH");
   const thalis = items
     .filter((item) => item.itemKind === "THALI" && item.mealType === mealType)
@@ -68,9 +71,9 @@ export function MenuSection({ items }: MenuSectionProps) {
   }, []);
 
   return (
-    <section id="menu" className="section-padding w-full max-w-full overflow-hidden">
+    <section id="menu" className="section-padding w-full max-w-full overflow-hidden pb-28 md:pb-16">
       <div className="mx-auto w-full min-w-0 max-w-7xl">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="hidden flex-col gap-5 md:flex lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.26em] text-primary">
               Today’s {mealType === "LUNCH" ? "Lunch" : "Dinner"} Menu
@@ -99,86 +102,285 @@ export function MenuSection({ items }: MenuSectionProps) {
               Cooked fresh daily in limited batches for freshness.
             </p>
           </div>
+          <MobileLocationQuote
+            kitchenLocation={kitchenLocation}
+            onDistanceChange={setDeliveryDistanceKm}
+          />
         </div>
 
-        <div key={mealType} className="mt-10 grid min-w-0 grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 animate-[menu-fade_.28s_ease-out]">
+        <div className="md:hidden">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Freshly cooked today</p>
+              <h2 className="mt-1 font-serif text-3xl">Today’s {mealType === "LUNCH" ? "Lunch" : "Dinner"}</h2>
+            </div>
+            <p className="pb-1 text-right text-xs text-stone-500">Limited batches</p>
+          </div>
+          <div className="mt-5 grid grid-cols-2 rounded-2xl border border-border bg-white p-1" aria-label="Choose menu">
+            {(["LUNCH", "DINNER"] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                aria-pressed={mealType === type}
+                onClick={() => setMealType(type)}
+                className={`rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
+                  mealType === type ? "bg-primary text-white shadow-sm" : "text-stone-600"
+                }`}
+              >
+                {type === "LUNCH" ? "Lunch" : "Dinner"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div key={mealType} className="mt-5 divide-y divide-border/80 md:mt-10 md:hidden animate-[menu-fade_.28s_ease-out]">
+          {thalis.map((item) => <MobileMenuRow item={item} key={item.id} />)}
+        </div>
+
+        <div key={`desktop-${mealType}`} className="mt-10 hidden min-w-0 grid-cols-1 gap-6 md:grid md:grid-cols-2 xl:grid-cols-3 animate-[menu-fade_.28s_ease-out]">
           {thalis.map((item) => (
-            <MenuCard
-              item={item}
-              key={item.id}
-              onAuthRequired={(next) => {
-                setAuthNext(next);
-                setAuthOpen(true);
-              }}
-            />
+            <MenuCard item={item} key={item.id} />
           ))}
         </div>
 
         {addOns.length ? (
-          <div className="mt-14 border-t border-border pt-10">
+          <div className="mt-8 border-t border-border pt-6 md:mt-14 md:pt-10">
             <p className="text-sm font-semibold uppercase tracking-[0.26em] text-primary">Customise your meal</p>
-            <h3 className="mt-3 font-serif text-3xl">Add a little extra</h3>
-            <div key={`addons-${mealType}`} className="mt-7 grid min-w-0 grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 animate-[menu-fade_.28s_ease-out]">
+            <h3 className="mt-1 font-serif text-2xl md:mt-3 md:text-3xl">Add a little extra</h3>
+            <div key={`mobile-addons-${mealType}`} className="mt-3 divide-y divide-border/80 md:hidden animate-[menu-fade_.28s_ease-out]">
+              {addOns.map((item) => <MobileMenuRow item={item} key={item.id} />)}
+            </div>
+            <div key={`desktop-addons-${mealType}`} className="mt-7 hidden min-w-0 grid-cols-1 gap-6 md:grid md:grid-cols-2 xl:grid-cols-3 animate-[menu-fade_.28s_ease-out]">
               {addOns.map((item) => (
-                <MenuCard
-                  item={item}
-                  key={item.id}
-                  onAuthRequired={(next) => {
-                    setAuthNext(next);
-                    setAuthOpen(true);
-                  }}
-                />
+                <MenuCard item={item} key={item.id} />
               ))}
             </div>
           </div>
         ) : null}
       </div>
-      {authOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="relative w-full max-w-md">
-            <button
-              type="button"
-              onClick={() => setAuthOpen(false)}
-              className="absolute right-4 top-4 z-10 rounded-full bg-white/90 p-2 text-foreground shadow"
-            >
-              <X className="h-4 w-4" />
-            </button>
-            <CustomerAuthCard next={authNext} />
-          </div>
-        </div>
-      ) : null}
+      <MobileCartBar />
     </section>
   );
 }
 
-function MenuCard({
-  item,
-  onAuthRequired
-}: {
-  item: MenuSectionProps["items"][number];
-  onAuthRequired: (next: string) => void;
-}) {
-  const { items, addItem, replaceWithSingleItem, updateQuantity } = useCart();
-  const quantity = items.find((entry) => entry.id === item.id)?.quantity ?? 0;
-  const isCombo = item.badge.includes("Combo Offer");
-  const cartItem = {
+function getCartItem(item: MenuSectionProps["items"][number]) {
+  return {
     id: item.id,
     name: item.name,
     price: item.price,
     imageUrl: item.imageUrl,
     badge: item.badge
   };
+}
 
-  async function requireAuth(next: string) {
-    const supabase = createClient();
-    const {
-      data: { user }
-    } = await supabase.auth.getUser();
+function getFoodMarker(item: MenuSectionProps["items"][number]) {
+  const content = [item.name, item.description, ...item.components.map(({ itemName }) => itemName)]
+    .join(" ")
+    .toLowerCase();
 
-    if (user) return true;
-    onAuthRequired(next);
-    return false;
+  if (/\b(egg|chicken|mutton|fish|pabda|katla|rui|chingri|prawn|meat|mach)\b/.test(content)) {
+    return { label: "Non-vegetarian", className: "border-primary bg-primary" };
   }
+
+  if (/\b(veg|vegetarian|paneer|dhok|roti|rice|parantha|papad|dal|daal|sabzi|vegetable)\b/.test(content)) {
+    return { label: "Vegetarian", className: "border-leaf bg-leaf" };
+  }
+
+  return null;
+}
+
+function FoodMarker({ item }: { item: MenuSectionProps["items"][number] }) {
+  const marker = getFoodMarker(item);
+  if (!marker) return null;
+
+  return (
+    <span className={`inline-grid h-5 w-5 place-items-center rounded-[5px] border ${marker.className}`} title={marker.label} aria-label={marker.label}>
+      <span className="h-2 w-2 rounded-full bg-white" />
+    </span>
+  );
+}
+
+function MobileLocationQuote({
+  kitchenLocation,
+  onDistanceChange
+}: {
+  kitchenLocation: MenuSectionProps["kitchenLocation"];
+  onDistanceChange: (distanceKm: number | null) => void;
+}) {
+  const { subtotal } = useCart();
+  const [distanceKm, setDistanceKm] = useState<number | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [message, setMessage] = useState("Tap to see your delivery fee.");
+  const outOfRange = distanceKm !== null && distanceKm > MAX_DELIVERY_DISTANCE_KM;
+  const deliverySlab = distanceKm === null ? null : getDeliverySlab(distanceKm);
+  const deliveryFee = useMemo(
+    () => calculateDeliveryCharge({ subtotal, distanceKm: distanceKm ?? 0 }),
+    [distanceKm, subtotal]
+  );
+
+  function detectLocation() {
+    if (!navigator.geolocation) {
+      setMessage("Location is not available in this browser. You can enter your address at checkout.");
+      return;
+    }
+
+    setLocating(true);
+    setMessage("Getting your delivery location…");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const nextDistance = haversineDistanceKm(
+          { lat: kitchenLocation.latitude, lng: kitchenLocation.longitude },
+          { lat: position.coords.latitude, lng: position.coords.longitude }
+        );
+        setDistanceKm(nextDistance);
+        onDistanceChange(nextDistance <= MAX_DELIVERY_DISTANCE_KM ? nextDistance : null);
+        setLocating(false);
+        setMessage(
+          nextDistance > MAX_DELIVERY_DISTANCE_KM
+            ? "We are coming soon to your location."
+            : `Delivery location found (±${Math.round(position.coords.accuracy)} m).`
+        );
+      },
+      () => {
+        setLocating(false);
+        setMessage("Location permission was denied. You can enter your address at checkout.");
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 }
+    );
+  }
+
+  return (
+    <div className="mt-5 border-y border-border/80 py-3.5 md:hidden">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <MapPin className="h-5 w-5 shrink-0 text-primary" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Deliver to your location</p>
+            <p className="truncate text-xs text-stone-500">{message}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          className="inline-flex shrink-0 items-center rounded-lg border border-primary px-3 py-2 text-xs font-bold text-primary disabled:opacity-60"
+          onClick={detectLocation}
+          disabled={locating}
+        >
+          <LocateFixed className="mr-1.5 h-3.5 w-3.5" />
+          {locating ? "Finding…" : "Use location"}
+        </button>
+      </div>
+      {distanceKm !== null && !outOfRange && deliverySlab ? (
+        <p className="mt-2 pl-7 text-xs font-semibold text-primary">
+          {distanceKm.toFixed(1)} km away · {subtotal > 0 ? deliveryFee === 0 ? "Free delivery" : `Delivery ${formatCurrency(deliveryFee)}` : `Delivery ${formatCurrency(deliverySlab.deliveryCharge)} (free from ${formatCurrency(deliverySlab.freeDeliveryThreshold)})`}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function MobileMenuRow({ item }: { item: MenuSectionProps["items"][number] }) {
+  const { items, addItem, updateQuantity } = useCart();
+  const quantity = items.find((entry) => entry.id === item.id)?.quantity ?? 0;
+  const cartItem = getCartItem(item);
+
+  return (
+    <article className="py-3.5">
+      <div className="flex min-w-0 gap-3">
+        <Image
+          src={item.imageUrl}
+          alt={item.name}
+          width={112}
+          height={112}
+          className="h-24 w-24 shrink-0 rounded-2xl border border-border bg-white object-cover"
+          sizes="96px"
+          quality={75}
+          loading="lazy"
+        />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-w-0 items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-2">
+                <FoodMarker item={item} />
+                <h3 className="truncate text-base font-semibold leading-5 text-foreground">{item.name}</h3>
+              </div>
+              <p className="mt-1 truncate text-xs leading-5 text-stone-500">{item.description}</p>
+            </div>
+            <span className="shrink-0 text-sm font-semibold text-primary">{formatCurrency(item.price)}</span>
+          </div>
+          <div className="mt-auto flex items-end justify-between gap-3 pt-2">
+            <span className="max-w-[55%] truncate text-[11px] font-medium text-stone-500">{item.badge}</span>
+            {quantity > 0 ? (
+              <div className="inline-flex shrink-0 items-center rounded-lg border border-primary bg-white text-primary">
+                <button
+                  type="button"
+                  aria-label={`Remove one ${item.name}`}
+                  className="grid h-8 w-8 place-items-center"
+                  onClick={() => updateQuantity(item.id, quantity - 1)}
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+                <span className="min-w-6 text-center text-sm font-semibold">{quantity}</span>
+                <button
+                  type="button"
+                  aria-label={`Add one ${item.name}`}
+                  className="grid h-8 w-8 place-items-center"
+                  onClick={() => addItem(cartItem)}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="h-8 shrink-0 rounded-lg border border-primary px-4 text-xs font-bold tracking-wide text-primary"
+                onClick={() => addItem(cartItem)}
+              >
+                ADD
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+      {item.components.length ? (
+        <details className="ml-[108px] mt-2 text-xs text-stone-600">
+          <summary className="cursor-pointer font-semibold text-primary">Includes {item.components.length} items</summary>
+          <p className="mt-1 leading-5">{item.components.map(({ itemName }) => itemName).join(" · ")}</p>
+        </details>
+      ) : null}
+    </article>
+  );
+}
+
+function MobileCartBar() {
+  const { itemCount, subtotal } = useCart();
+  if (!itemCount) return null;
+
+  return (
+    <Link
+      href="/checkout"
+      className="fixed inset-x-3 bottom-3 z-[7500] flex items-center justify-between rounded-2xl bg-primary px-4 py-3 text-white shadow-[0_14px_32px_rgba(181,30,30,0.28)] md:hidden"
+      aria-label={`View cart with ${itemCount} item${itemCount === 1 ? "" : "s"}`}
+    >
+      <span className="flex items-center gap-3">
+        <span className="relative grid h-9 w-9 place-items-center rounded-full border border-white/60">
+          <ShoppingBag className="h-4 w-4" />
+          <span className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-white px-1 text-[10px] font-bold text-primary">{itemCount}</span>
+        </span>
+        <span>
+          <span className="block text-sm font-semibold">{itemCount} item{itemCount === 1 ? "" : "s"} added</span>
+          <span className="block text-xs text-white/80">{formatCurrency(subtotal)}</span>
+        </span>
+      </span>
+      <span className="text-sm font-bold">View cart →</span>
+    </Link>
+  );
+}
+
+function MenuCard({ item }: { item: MenuSectionProps["items"][number] }) {
+  const { items, addItem, replaceWithSingleItem, updateQuantity } = useCart();
+  const quantity = items.find((entry) => entry.id === item.id)?.quantity ?? 0;
+  const isCombo = item.badge.includes("Combo Offer");
+  const cartItem = getCartItem(item);
 
   return (
     <div className="w-full min-w-0 max-w-full">
@@ -196,7 +398,10 @@ function MenuCard({
         <div className="mt-5 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0">
             <Badge>{item.badge}</Badge>
-            <h3 className="mt-3 break-words font-serif text-2xl">{item.name}</h3>
+            <div className="mt-3 flex items-center gap-2">
+              <FoodMarker item={item} />
+              <h3 className="break-words font-serif text-2xl">{item.name}</h3>
+            </div>
           </div>
           <p className="break-words text-lg font-semibold text-primary sm:shrink-0">{formatCurrency(item.price)}</p>
         </div>
@@ -244,10 +449,9 @@ function MenuCard({
               size="sm"
               className="w-full transition-transform duration-200 hover:-translate-y-0.5 sm:w-auto sm:min-w-[118px]"
               variant="outline"
-              onClick={async (event) => {
+              onClick={(event) => {
                 event.stopPropagation();
                 addItem(cartItem, 1);
-                if (!(await requireAuth("/"))) return;
               }}
             >
               <Plus className="mr-1.5 h-4 w-4" />
@@ -256,10 +460,9 @@ function MenuCard({
             <Button
               size="sm"
               className="w-full transition-transform duration-200 hover:-translate-y-0.5 sm:w-auto sm:min-w-[108px]"
-              onClick={async (event) => {
+              onClick={(event) => {
                 event.stopPropagation();
                 replaceWithSingleItem(cartItem, Math.max(quantity, 1));
-                if (!(await requireAuth("/checkout"))) return;
                 window.location.href = "/checkout";
               }}
             >

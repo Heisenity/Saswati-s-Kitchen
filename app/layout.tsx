@@ -7,9 +7,9 @@ export const metadata: Metadata = {
   title: "Saswati’s Kitchen",
   description: "Fresh homemade Bengali meals delivered daily in Barrackpore.",
   icons: {
-    icon: "/brand/logo.jpg",
-    apple: "/brand/logo.jpg",
-    shortcut: "/brand/logo.jpg"
+    icon: "/brand/logo.svg?v=2",
+    apple: "/brand/logo.svg?v=2",
+    shortcut: "/brand/logo.svg?v=2"
   }
 };
 

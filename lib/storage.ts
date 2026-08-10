@@ -1,5 +1,6 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
 import { buildStorageObjectKey, validateUploadFile } from "@/lib/security";
 
@@ -105,6 +106,19 @@ function getClient() {
   });
 }
 
+function getSupabaseStorageClient() {
+  if (!env.supabaseUrl || !env.supabaseServiceRoleKey || !env.supabaseStorageBucket) {
+    return null;
+  }
+
+  return createSupabaseClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false
+    }
+  });
+}
+
 export async function createPresignedR2Upload(input: {
   fileName: string;
   contentType: string;
@@ -153,6 +167,28 @@ export async function createPresignedR2Upload(input: {
   };
 }
 
+export async function downloadR2PublicUrl(url: string) {
+  const client = getClient();
+  if (!client || !env.r2Bucket || !env.r2PublicUrl) return null;
+
+  const publicBase = env.r2PublicUrl.replace(/\/$/, "");
+  if (!url.startsWith(`${publicBase}/`)) return null;
+
+  const response = await client.send(
+    new GetObjectCommand({
+      Bucket: env.r2Bucket,
+      Key: decodeURIComponent(url.slice(publicBase.length + 1))
+    })
+  );
+  const bytes = response.Body ? Buffer.from(await response.Body.transformToByteArray()) : null;
+  if (!bytes) return null;
+
+  return {
+    bytes,
+    contentType: response.ContentType ?? "application/octet-stream"
+  };
+}
+
 async function uploadFileToR2(
   file: File,
   folder: string,
@@ -193,6 +229,35 @@ async function uploadFileToR2(
   return `${env.r2PublicUrl.replace(/\/$/, "")}/${fileName}`;
 }
 
+async function uploadFileToSupabaseStorage(
+  file: File,
+  folder: string,
+  options: {
+    allowedMimeTypes: string[];
+    allowedExtensions: string[];
+    maxBytes: number;
+  }
+) {
+  const supabase = getSupabaseStorageClient();
+  if (!supabase) {
+    throw new Error("Supabase Storage fallback is not configured.");
+  }
+
+  const { bytes, originalName } = await validateUploadFile(file, options);
+  const fileName = buildStorageObjectKey(folder, originalName);
+  const { error } = await supabase.storage
+    .from(env.supabaseStorageBucket)
+    .upload(fileName, bytes, {
+      contentType: file.type,
+      upsert: false
+    });
+
+  if (error) throw error;
+
+  const { data } = supabase.storage.from(env.supabaseStorageBucket).getPublicUrl(fileName);
+  return data.publicUrl;
+}
+
 export async function uploadPaymentProof(file: File) {
   if (file.size <= 0 || file.size > paymentProofUploadOptions.maxBytes) {
     throw new Error("Attachment must be smaller than 5 MB.");
@@ -202,7 +267,21 @@ export async function uploadPaymentProof(file: File) {
     return await uploadFileToR2(file, "payment-proofs");
   } catch (error) {
     logR2UploadError("payment-proofs", error);
-    // ponytail: if R2 is down or misconfigured, keep the proof inline so the order still lands in Supabase Postgres
+  }
+
+  try {
+    return await uploadFileToSupabaseStorage(file, "payment-proofs", {
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+      allowedExtensions: ["jpg", "jpeg", "png", "webp"],
+      maxBytes: paymentProofUploadOptions.maxBytes
+    });
+  } catch (error) {
+    console.error("[supabase-storage:upload-failed]", {
+      folder: "payment-proofs",
+      name: error instanceof Error ? error.name : "UnknownError",
+      message: error instanceof Error ? error.message : "Unknown Supabase Storage error"
+    });
+    // ponytail: last-resort keeps checkout unblocked if both object stores are unavailable
     return fileToDataUrl(file);
   }
 }

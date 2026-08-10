@@ -6,28 +6,30 @@ import { cn } from "@/lib/utils";
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden px-4 pb-10 pt-6 sm:px-6 sm:pb-14 lg:px-8 lg:pb-16 lg:pt-8">
+    <section className="relative overflow-hidden px-4 pb-4 pt-5 sm:px-6 sm:pb-14 sm:pt-6 lg:px-8 lg:pb-16 lg:pt-8">
       <div className="absolute inset-x-0 top-10 mx-auto hidden max-w-6xl opacity-30 lg:block">
         <Image src="/brand/howrah-line.svg" alt="" width={1200} height={400} className="w-full" />
       </div>
 
       <div className="mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[0.98fr_1.02fr]">
         <div className="relative">
-          <Badge>Cooked fresh daily</Badge>
-          <h1 className="mt-5 max-w-2xl break-words font-serif text-[2.55rem] leading-[0.98] text-foreground sm:text-5xl lg:text-[5.1rem]">
-            Fresh Homemade Bengali Meals, Delivered Daily
+          <Badge className="px-2.5 py-0.5 text-[10px] sm:px-3 sm:py-1 sm:text-xs">Cooked fresh daily</Badge>
+          <h1 className="mt-3 max-w-2xl break-words font-serif text-3xl leading-[1.02] text-foreground sm:mt-5 sm:text-5xl lg:text-[5.1rem]">
+            <span className="sm:hidden">Fresh Bengali meals, made today.</span>
+            <span className="hidden sm:inline">Fresh Homemade Bengali Meals, Delivered Daily</span>
           </h1>
-          <p className="mt-5 max-w-xl text-base leading-8 text-stone-700 sm:text-lg">
-            Simple, hygienic, ghar-er moto ranna cooked fresh with care every day.
+          <p className="mt-3 max-w-xl text-sm leading-6 text-stone-700 sm:mt-5 sm:text-lg sm:leading-8">
+            <span className="sm:hidden">Choose a dish and add it in one tap.</span>
+            <span className="hidden sm:inline">Simple, hygienic, ghar-er moto ranna cooked fresh with care every day.</span>
           </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link href="#menu" className={cn(buttonVariants({ size: "lg" }))}>
+          <div className="mt-4 flex flex-col gap-3 sm:mt-8 sm:flex-row">
+            <Link href="#menu" className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}>
               Order Today’s Menu
             </Link>
           </div>
         </div>
 
-        <div className="surface bridge-grid relative overflow-hidden p-4 sm:p-5">
+        <div className="surface bridge-grid relative hidden overflow-hidden p-4 sm:block sm:p-5">
           <div className="absolute inset-x-6 top-6 z-10 flex justify-end sm:inset-x-7 sm:top-7">
             <Badge className="max-w-[calc(100%-1rem)] whitespace-normal bg-mustard/90 px-3 py-1.5 text-right text-[10px] leading-tight text-foreground shadow-sm sm:max-w-[22rem] sm:px-4 sm:py-2 sm:text-xs">
               Premium Bengali Lunch

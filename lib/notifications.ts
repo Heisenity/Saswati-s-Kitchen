@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { env, getTelegramChatIds } from "@/lib/env";
 import { formatPaymentProofAnalysis, type PaymentProofAnalysis } from "@/lib/payment-proof";
+import { downloadR2PublicUrl } from "@/lib/storage";
 
 type OrderLike = {
   orderNumber: string;
@@ -30,7 +31,7 @@ async function sendTelegramMessage(message: string) {
   if (!env.telegramBotToken || chatIds.length === 0) return;
 
   const url = `https://api.telegram.org/bot${env.telegramBotToken}/sendMessage`;
-  await Promise.allSettled(
+  const results = await Promise.allSettled(
     chatIds.map((chatId) =>
       fetch(url, {
         method: "POST",
@@ -41,6 +42,26 @@ async function sendTelegramMessage(message: string) {
         })
       })
     )
+  );
+  await logTelegramResults("message", results);
+}
+
+async function logTelegramResults(kind: string, results: PromiseSettledResult<Response>[]) {
+  await Promise.all(
+    results.map(async (result) => {
+      if (result.status === "rejected") {
+        console.error("[telegram:send-failed]", { kind, message: result.reason instanceof Error ? result.reason.message : String(result.reason) });
+        return;
+      }
+
+      if (!result.value.ok) {
+        console.error("[telegram:send-failed]", {
+          kind,
+          status: result.value.status,
+          body: (await result.value.text()).slice(0, 500)
+        });
+      }
+    })
   );
 }
 
@@ -64,15 +85,27 @@ async function getAttachmentFile(url: string, orderNumber: string) {
     });
   }
 
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Attachment fetch failed with ${response.status}`);
+  try {
+    const response = await fetch(url);
+    if (response.ok) {
+      const bytes = Buffer.from(await response.arrayBuffer());
+      const mimeType = response.headers.get("content-type") || "application/octet-stream";
+      const extension = mimeType.split("/")[1] || "bin";
+      return new File([bytes], `${orderNumber}-payment-proof.${extension}`, { type: mimeType });
+    }
+  } catch (error) {
+    console.error("[notification:public-attachment-fetch-failed]", {
+      orderNumber,
+      message: error instanceof Error ? error.message : String(error)
+    });
   }
 
-  const bytes = Buffer.from(await response.arrayBuffer());
-  const mimeType = response.headers.get("content-type") || "application/octet-stream";
+  const r2Object = await downloadR2PublicUrl(url);
+  if (!r2Object) throw new Error("Attachment fetch failed.");
+
+  const mimeType = r2Object.contentType;
   const extension = mimeType.split("/")[1] || "bin";
-  return new File([bytes], `${orderNumber}-payment-proof.${extension}`, { type: mimeType });
+  return new File([r2Object.bytes], `${orderNumber}-payment-proof.${extension}`, { type: mimeType });
 }
 
 async function sendTelegramAttachment(caption: string, url: string, orderNumber: string) {
@@ -81,7 +114,7 @@ async function sendTelegramAttachment(caption: string, url: string, orderNumber:
 
   try {
     const file = await getAttachmentFile(url, orderNumber);
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       chatIds.map((chatId) => {
         const formData = new FormData();
         formData.append("chat_id", chatId);
@@ -94,6 +127,7 @@ async function sendTelegramAttachment(caption: string, url: string, orderNumber:
         });
       })
     );
+    await logTelegramResults("attachment", results);
   } catch (error) {
     console.error("[telegram:payment-proof-send-failed]", {
       orderNumber,

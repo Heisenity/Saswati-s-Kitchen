@@ -94,7 +94,7 @@ export default async function ReceiptPage({
         <div className="mx-auto max-w-lg px-8 py-10">
           <div className="flex flex-col items-center text-center">
             <img
-              src="/brand/logo.jpg"
+              src="/brand/logo.svg?v=2"
               alt="Saswati's Kitchen"
               className="h-20 w-20 rounded-2xl object-cover"
             />

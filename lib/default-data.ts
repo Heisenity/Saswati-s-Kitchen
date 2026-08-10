@@ -66,7 +66,7 @@ export const defaultMenuItems: MenuSeed[] = [
     mealType: "LUNCH",
     itemKind: "THALI",
     stockLimit: 16,
-    components: ["Rice", "Moosor daal", "Aloo potol kosha", "Sorshe Pabda", "Chutney/aachar", "Papad", "Salad"]
+    components: ["Rice", "Moosor daal", "Aloo potol kosha", "Sorshe Pabda (1 pc)", "Chutney/aachar", "Papad", "Salad"]
   },
   {
     name: "Chicken Thali",
@@ -90,7 +90,7 @@ export const defaultMenuItems: MenuSeed[] = [
     mealType: "LUNCH",
     itemKind: "THALI",
     stockLimit: 22,
-    components: ["Rice", "Moosor daal", "Aloo potol kosha", "Katla curry", "Chutney/aachar", "Papad", "Salad"]
+    components: ["Rice", "Moosor daal", "Aloo potol kosha", "Katla curry (1 pc)", "Chutney/aachar", "Papad", "Salad"]
   },
   {
     name: "Rui Macher Thali",
@@ -102,7 +102,7 @@ export const defaultMenuItems: MenuSeed[] = [
     mealType: "LUNCH",
     itemKind: "THALI",
     stockLimit: 30,
-    components: ["Rice", "Moosor daal", "Aloo potol kosha", "Rui macher kalia", "Chutney/aachar", "Papad", "Salad"]
+    components: ["Rice", "Moosor daal", "Aloo potol kosha", "Rui macher kalia (1 pc)", "Chutney/aachar", "Papad", "Salad"]
   },
   {
     name: "Egg Thali",
@@ -114,7 +114,7 @@ export const defaultMenuItems: MenuSeed[] = [
     mealType: "LUNCH",
     itemKind: "THALI",
     stockLimit: 25,
-    components: ["Rice", "Moosor daal", "Aloo potol kosha", "Egg curry", "Chutney/aachar", "Papad", "Salad"]
+    components: ["Rice", "Moosor daal", "Aloo potol kosha", "Egg curry (1 pc)", "Chutney/aachar", "Papad", "Salad"]
   },
   {
     name: "Veg Thali",
@@ -126,7 +126,19 @@ export const defaultMenuItems: MenuSeed[] = [
     mealType: "LUNCH",
     itemKind: "THALI",
     stockLimit: 26,
-    components: ["Rice", "Moosor daal", "Aloo potol kosha", "Dhokar dalna / Paneer Curry", "Chutney/aachar", "Papad", "Salad"]
+    components: ["Rice", "Moosor daal", "Aloo potol kosha", "Chutney/aachar", "Papad", "Salad"]
+  },
+  {
+    name: "Special Veg Thali",
+    slug: "special-veg-thali",
+    description: "Our classic veg thali with paneer curry and dhokar dalna.",
+    price: 119,
+    badge: "Special Veg",
+    imageUrl: "/brand/special-veg-thali.png",
+    mealType: "LUNCH",
+    itemKind: "THALI",
+    stockLimit: 20,
+    components: ["Rice", "Moosor daal", "Aloo potol kosha", "Paneer curry/Dhokar dalna", "Chutney/aachar", "Papad", "Salad"]
   },
   {
     name: "Mutton Combo",
@@ -191,14 +203,26 @@ export const defaultMenuItems: MenuSeed[] = [
   {
     name: "Veg Thali",
     slug: "dinner-veg-thali",
-    description: "Light vegetarian Bengali dinner with dhokar dalna.",
+    description: "Light vegetarian Bengali dinner.",
     price: 89,
     badge: "Veg Comfort",
     imageUrl: "/brand/veg-thali.jpg",
     mealType: "DINNER",
     itemKind: "THALI",
     stockLimit: 26,
-    components: ["Rice", "Moong daal", "Mochar Ghanto (Banana Flower)", "Dhokar dalna", "Chutney/aachar", "Papad", "Salad"]
+    components: ["Rice", "Moong daal", "Mochar Ghanto (Banana Flower)", "Chutney/aachar", "Papad", "Salad"]
+  },
+  {
+    name: "Special Veg Thali",
+    slug: "dinner-special-veg-thali",
+    description: "Our classic veg dinner thali with paneer curry and dhokar dalna.",
+    price: 119,
+    badge: "Special Veg",
+    imageUrl: "/brand/special-veg-thali.png",
+    mealType: "DINNER",
+    itemKind: "THALI",
+    stockLimit: 20,
+    components: ["Rice", "Moong daal", "Mochar Ghanto (Banana Flower)", "Paneer curry/Dhokar dalna", "Chutney/aachar", "Papad", "Salad"]
   },
   {
     name: "Roti",

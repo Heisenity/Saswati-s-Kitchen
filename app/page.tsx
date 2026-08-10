@@ -20,7 +20,13 @@ export default async function HomePage() {
       <Header />
       <Hero />
       <TrustBadges />
-      <MenuSection items={menuItems} />
+      <MenuSection
+        items={menuItems}
+        kitchenLocation={{
+          latitude: settings.kitchenLatitude,
+          longitude: settings.kitchenLongitude
+        }}
+      />
       <DeliveryRules />
       <TimingSection label={slotState.label} />
       <SupportSection />

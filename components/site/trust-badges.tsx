@@ -11,7 +11,7 @@ const items = [
 
 export function TrustBadges() {
   return (
-    <section className="px-4 pb-8 sm:px-6 lg:px-8">
+    <section className="hidden px-4 pb-8 sm:block sm:px-6 lg:px-8">
       <div className="mx-auto grid max-w-7xl gap-4 md:grid-cols-3 xl:grid-cols-6">
         {items.map((item) => (
           <div key={item.label} className="surface flex items-center gap-3 px-4 py-4">
