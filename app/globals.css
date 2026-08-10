@@ -94,6 +94,23 @@ button {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes cursor-ripple {
+  from { opacity: 0.34; transform: translate(-50%, -50%) scale(0.35); }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(3.2); }
+}
+
+.cursor-ripple {
+  position: fixed;
+  z-index: 6999;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+  border: 1px solid rgba(181, 30, 30, 0.55);
+  border-radius: 999px;
+  animation: cursor-ripple 700ms ease-out forwards;
+  will-change: transform, opacity;
+}
+
 .insights-link {
   position: relative;
   display: inline-block;
