@@ -22,15 +22,16 @@ export function Header() {
     <header className="sticky top-0 z-[7000] border-b border-border/70 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/85">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
         <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <Image
-            src="/brand/logo.svg?v=2"
-            alt="Saswati's Kitchen logo"
-            width={56}
-            height={56}
-            className="h-10 w-10 shrink-0 rounded-xl border border-border bg-white object-cover sm:h-12 sm:w-12 sm:rounded-2xl"
-            sizes="48px"
-            priority
-          />
+          <span className="relative h-11 w-11 shrink-0 overflow-hidden sm:h-12 sm:w-12">
+            <Image
+              src="/brand/logo.jpg"
+              alt="Saswati's Kitchen logo"
+              fill
+              className="scale-[1.45] object-contain mix-blend-multiply"
+              sizes="48px"
+              priority
+            />
+          </span>
           <div className="min-w-0">
             <p className="truncate font-serif text-base leading-none sm:text-xl">Saswati’s Kitchen</p>
             <p className="mt-1 hidden text-[10px] uppercase tracking-[0.16em] text-stone-500 min-[390px]:block sm:text-xs sm:tracking-[0.22em]">
