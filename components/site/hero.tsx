@@ -39,6 +39,18 @@ function LotusDivider() {
   );
 }
 
+function PlaqueLeaf({ className }: { className: string }) {
+  return (
+    <svg viewBox="0 0 44 34" fill="none" aria-hidden="true" focusable="false" className={className}>
+      <g stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 31C14 25 20 16 24 3" />
+        <path d="M12 25C7 24 4 21 3 17c5 0 9 2 11 6M17 20c1-6 5-10 10-12 1 5-2 10-8 14M21 13c-4-2-6-5-6-9 5 1 8 3 9 7" />
+        <circle cx="4" cy="31" r="1.6" />
+      </g>
+    </svg>
+  );
+}
+
 export function Hero() {
   return (
     <section className="relative overflow-hidden px-4 pb-4 pt-5 sm:px-6 sm:pb-14 sm:pt-6 lg:px-8 lg:pb-16 lg:pt-8">
@@ -103,11 +115,13 @@ export function Hero() {
               <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(180deg,rgba(232,157,65,0.03),rgba(125,68,20,0.09))]" />
               <BotanicalSprig className="pointer-events-none absolute -left-7 top-7 z-[2] h-24 w-24 rotate-[78deg] text-[#bd8536]/15" />
 
-              <div className="absolute left-[43%] top-[29%] z-[3] w-max max-w-[calc(100%-6rem)] -translate-x-1/2 rounded-[24px] border border-[#be7d2d]/65 bg-[#fff6e7]/85 px-5 py-3.5 text-center shadow-[0_8px_22px_rgba(78,42,12,0.1)] backdrop-blur-[6px]">
+              <div className="absolute left-1/2 top-[29%] z-[3] w-max max-w-[calc(100%-6rem)] -translate-x-1/2 rounded-[24px] border border-[#be7d2d]/65 bg-[#fff6e7]/85 px-7 py-3.5 text-center shadow-[0_8px_22px_rgba(78,42,12,0.1)] backdrop-blur-[6px]">
                 <span aria-hidden="true" className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[58%] bg-[#fff6e7] px-2 text-sm text-[#bd8536]">✦</span>
+                <PlaqueLeaf className="pointer-events-none absolute bottom-1 left-1 h-8 w-10 text-[#bd8536]/45" />
+                <PlaqueLeaf className="pointer-events-none absolute bottom-1 right-1 h-8 w-10 -scale-x-100 text-[#bd8536]/45" />
                 <p
                   lang="bn"
-                  className="whitespace-nowrap text-[1.08rem] text-[#76502d] min-[390px]:text-[1.18rem]"
+                  className="relative z-10 whitespace-nowrap text-[1.08rem] text-[#76502d] min-[390px]:text-[1.18rem]"
                   style={{ fontFamily: '"Noto Serif Bengali", "Bangla MN", "Kohinoor Bangla", "Nirmala UI", serif' }}
                 >
                   ঘরের স্বাদ, মনের টানে
