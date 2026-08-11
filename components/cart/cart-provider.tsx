@@ -8,22 +8,28 @@ import {
   useState
 } from "react";
 
-type CartItem = {
+export type CartItem = {
   id: string;
   name: string;
   price: number;
   imageUrl: string;
   quantity: number;
   badge: string;
+  mealType?: "LUNCH" | "DINNER";
+  itemKind?: "THALI" | "ADD_ON";
+  description?: string;
+  components?: string[];
+  customization?: string | null;
 };
 
-type CartCandidate = Omit<CartItem, "quantity"> & { itemKind?: string };
+export type CartCandidate = Omit<CartItem, "quantity">;
 
 type CartContextValue = {
   items: CartItem[];
   addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
   replaceWithSingleItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
   updateQuantity: (id: string, quantity: number) => void;
+  updateCustomization: (id: string, customization: string | null) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
   itemCount: number;
@@ -93,6 +99,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           current
             .map((item) => (item.id === id ? { ...item, quantity } : item))
             .filter((item) => item.quantity > 0)
+        );
+      },
+      updateCustomization(id, customization) {
+        setItems((current) =>
+          current.map((item) => item.id === id ? { ...item, customization } : item)
         );
       },
       removeItem(id) {

@@ -25,7 +25,8 @@ export const orderSchema = z.object({
         menuItemId: z.string().optional(),
         itemName: z.string().min(2),
         quantity: z.number().int().min(1),
-        unitPrice: z.number().int().min(1)
+        unitPrice: z.number().int().min(1),
+        customization: z.string().min(2).max(40).optional()
       })
     )
     .min(1)

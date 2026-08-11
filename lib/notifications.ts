@@ -19,7 +19,7 @@ type OrderLike = {
   latitude?: number | null;
   longitude?: number | null;
   paymentScreenshotUrl?: string | null;
-  items?: Array<{ itemName: string; quantity: number; unitPrice?: number; totalPrice?: number }>;
+  items?: Array<{ itemName: string; quantity: number; unitPrice?: number; totalPrice?: number; customization?: string | null }>;
 };
 
 function canSendMail() {
@@ -172,7 +172,7 @@ export async function sendNewOrderNotification(
             ? item.unitPrice * item.quantity
             : null;
 
-      return `- ${item.itemName} x${item.quantity}${lineTotal != null ? ` = ₹${lineTotal}` : ""}`;
+      return `- ${item.itemName} x${item.quantity}${lineTotal != null ? ` = ₹${lineTotal}` : ""}${item.customization ? ` · Request: ${item.customization}` : ""}`;
     }).join("\n") ?? "Not available";
   const locationLine = buildLocationLine(order);
   const message = [

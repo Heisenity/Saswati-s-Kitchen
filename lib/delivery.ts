@@ -7,6 +7,11 @@ type DeliveryArgs = {
   lowOrderDeliveryCharge?: number;
 };
 
+type DeliverySettings = Pick<
+  DeliveryArgs,
+  "freeDeliveryOneKmMin" | "freeDeliveryTwoKmMin" | "aboveTwoKmDeliveryCharge" | "lowOrderDeliveryCharge"
+>;
+
 export const MAX_DELIVERY_DISTANCE_KM = 6;
 
 export const DELIVERY_SLABS = [
@@ -30,7 +35,13 @@ export function getDeliverySlab(distanceKm: number) {
   return DELIVERY_SLABS.find((slab) => distanceKm <= slab.maxDistanceKm) ?? null;
 }
 
-export function getFreeDeliveryThreshold(distanceKm: number) {
+export function getFreeDeliveryThreshold(distanceKm: number, settings: DeliverySettings = {}) {
+  if (distanceKm <= 1 && settings.freeDeliveryOneKmMin !== undefined) {
+    return settings.freeDeliveryOneKmMin;
+  }
+  if (distanceKm <= 2 && settings.freeDeliveryTwoKmMin !== undefined) {
+    return settings.freeDeliveryTwoKmMin;
+  }
   return getDeliverySlab(distanceKm)?.freeDeliveryThreshold ?? null;
 }
 
@@ -42,10 +53,18 @@ export function getFreeDeliveryProgress(subtotal: number, threshold: number) {
   return threshold > 0 ? Math.min(100, Math.max(0, (subtotal / threshold) * 100)) : 0;
 }
 
-export function getDeliveryFee(distanceKm: number, subtotal: number) {
+export function getDeliveryFee(distanceKm: number, subtotal: number, settings: DeliverySettings = {}) {
   const slab = getDeliverySlab(distanceKm);
   if (!slab || subtotal <= 0) return 0;
-  return subtotal >= slab.freeDeliveryThreshold ? 0 : slab.deliveryCharge;
+  const threshold = getFreeDeliveryThreshold(distanceKm, settings);
+  if (threshold !== null && subtotal >= threshold) return 0;
+  if (distanceKm > 2 && settings.aboveTwoKmDeliveryCharge !== undefined) {
+    return settings.aboveTwoKmDeliveryCharge;
+  }
+  if (distanceKm <= 2 && settings.lowOrderDeliveryCharge !== undefined) {
+    return settings.lowOrderDeliveryCharge;
+  }
+  return slab.deliveryCharge;
 }
 
 export function getSuggestedAddOns<T extends DeliveryAddOn>(
@@ -80,7 +99,16 @@ export function haversineDistanceKm(
 
 export function calculateDeliveryCharge({
   subtotal,
-  distanceKm
+  distanceKm,
+  freeDeliveryOneKmMin,
+  freeDeliveryTwoKmMin,
+  aboveTwoKmDeliveryCharge,
+  lowOrderDeliveryCharge
 }: DeliveryArgs) {
-  return getDeliveryFee(distanceKm, subtotal);
+  return getDeliveryFee(distanceKm, subtotal, {
+    freeDeliveryOneKmMin,
+    freeDeliveryTwoKmMin,
+    aboveTwoKmDeliveryCharge,
+    lowOrderDeliveryCharge
+  });
 }

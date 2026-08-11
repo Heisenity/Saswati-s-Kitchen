@@ -1,11 +1,10 @@
 import { cn } from "@/lib/utils";
+import type { HTMLAttributes } from "react";
 
 export function Card({
   className,
-  children
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return <div className={cn("surface", className)}>{children}</div>;
+  children,
+  ...props
+}: HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn("surface", className)} {...props}>{children}</div>;
 }

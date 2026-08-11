@@ -35,7 +35,10 @@ export default async function ReceiptPage({
     slotType: order.slotType,
     totalAmount: order.totalAmount,
     advanceAmount: order.advanceAmount,
-    items: order.items.map((item) => ({ name: item.itemName, quantity: item.quantity }))
+    items: order.items.map((item) => ({
+      name: `${item.itemName}${item.customization ? ` · ${item.customization}` : ""}`,
+      quantity: item.quantity
+    }))
   });
 
   return (
@@ -67,7 +70,7 @@ export default async function ReceiptPage({
                       className="flex min-w-0 items-start justify-between gap-3 rounded-2xl bg-muted px-4 py-3 text-sm"
                     >
                       <span className="min-w-0 break-words">
-                        {item.itemName} x{item.quantity}
+                        {item.itemName} x{item.quantity}{item.customization ? ` · ${item.customization}` : ""}
                       </span>
                       <span>{formatCurrency(item.totalPrice)}</span>
                     </div>

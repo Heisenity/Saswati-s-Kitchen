@@ -23,7 +23,7 @@ type OrderRow = {
   distanceKm: number | null;
   paymentScreenshotUrl: string | null;
   createdAt: string | Date;
-  items: Array<{ id: string; itemName: string; quantity: number }>;
+  items: Array<{ id: string; itemName: string; quantity: number; customization?: string | null }>;
 };
 
 const statuses = [
@@ -119,7 +119,7 @@ export function OrderManager({ initialOrders }: { initialOrders: OrderRow[] }) {
               <div className="mt-3 flex flex-wrap gap-2 text-sm">
                 {order.items.map((item) => (
                   <span key={item.id} className="rounded-full bg-muted px-3 py-2">
-                    {item.itemName} x{item.quantity}
+                    {item.itemName} x{item.quantity}{item.customization ? ` · ${item.customization}` : ""}
                   </span>
                 ))}
               </div>

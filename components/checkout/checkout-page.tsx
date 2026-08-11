@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, CircleCheck, Copy, LocateFixed, LoaderCircle } from "lucide-react";
 import { useCart } from "@/components/cart/cart-provider";
+import { CartGrowthCard, CartItemCustomization } from "@/components/cart/cart-growth-card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,10 +14,6 @@ import { Card } from "@/components/ui/card";
 import {
   MAX_DELIVERY_DISTANCE_KM,
   calculateDeliveryCharge,
-  getFreeDeliveryProgress,
-  getFreeDeliveryThreshold,
-  getRemainingAmount,
-  getSuggestedAddOns,
   haversineDistanceKm
 } from "@/lib/delivery";
 import type { PaymentProofAnalysis } from "@/lib/payment-proof";
@@ -40,15 +37,6 @@ type CheckoutPageProps = {
     lunch: "OPEN" | "CLOSED";
     dinner: "OPEN" | "CLOSED" | "NOT_OPEN";
   };
-  recommendations: Array<{
-    id: string;
-    name: string;
-    price: number;
-    imageUrl: string;
-    badge: string;
-    mealType: "LUNCH" | "DINNER";
-    itemKind: "THALI" | "ADD_ON";
-  }>;
 };
 
 type UploadedPaymentProof = {
@@ -141,11 +129,10 @@ function getCustomerErrorMessage(error: unknown) {
 export function CheckoutPage({
   initialCustomerEmail = "",
   settings,
-  slotState,
-  recommendations
+  slotState
 }: CheckoutPageProps) {
   const router = useRouter();
-  const { items, subtotal, addItem, clearCart, setDeliveryDistanceKm } = useCart();
+  const { items, subtotal, clearCart, setDeliveryDistanceKm } = useCart();
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState(initialCustomerEmail);
   const [phone, setPhone] = useState("");
@@ -171,14 +158,6 @@ export function CheckoutPage({
   const hasLocation =
     Number.isFinite(location.latitude) && Number.isFinite(location.longitude);
   const isManualDeliveryReview = deliveryQuote?.mode === "MANUAL_REVIEW";
-  const suggestedItems = useMemo(() => {
-    const cartIds = new Set(items.map((item) => item.id));
-    return recommendations
-      .filter((item) => item.mealType === slotType && !cartIds.has(item.id))
-      .sort((left, right) => Number(right.itemKind === "ADD_ON") - Number(left.itemKind === "ADD_ON"))
-      .slice(0, 6);
-  }, [items, recommendations, slotType]);
-
   const deliveryPreview = useMemo(() => {
     if (isManualDeliveryReview) {
       const advance = Math.ceil(subtotal / 2);
@@ -221,19 +200,6 @@ export function CheckoutPage({
   const outOfRange =
     deliveryPreview.distanceKm !== null &&
     deliveryPreview.distanceKm > MAX_DELIVERY_DISTANCE_KM;
-  const freeDeliveryThreshold =
-    deliveryPreview.distanceKm === null
-      ? null
-      : getFreeDeliveryThreshold(deliveryPreview.distanceKm);
-  const remainingAmount =
-    freeDeliveryThreshold === null
-      ? null
-      : getRemainingAmount(subtotal, freeDeliveryThreshold);
-  const suggestedAddOns = useMemo(
-    () => getSuggestedAddOns(remainingAmount ?? 0, suggestedItems),
-    [remainingAmount, suggestedItems]
-  );
-
   function showError(errorMessage: string) {
     setError(errorMessage);
     setErrorPopupOpen(true);
@@ -479,7 +445,8 @@ export function CheckoutPage({
             menuItemId: item.id,
             itemName: item.name,
             quantity: item.quantity,
-            unitPrice: item.price
+            unitPrice: item.price,
+            customization: item.customization ?? undefined
           }))
         })
       });
@@ -500,7 +467,7 @@ export function CheckoutPage({
   return (
     <div className="section-padding w-full max-w-full overflow-hidden">
       <div className="mx-auto grid w-full min-w-0 max-w-7xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <form onSubmit={handleSubmit} className="min-w-0 space-y-6">
+        <form onSubmit={handleSubmit} className="order-2 min-w-0 space-y-6 lg:order-1">
           <Card className="min-w-0 p-4 sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -694,14 +661,21 @@ export function CheckoutPage({
           </Button>
         </form>
 
-        <Card className="h-fit min-w-0 p-4 sm:p-6">
+        <Card data-testid="checkout-summary" className="order-1 h-fit min-w-0 p-4 sm:p-6 lg:order-2 lg:sticky lg:top-24">
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Order Summary</p>
+          <div className="mt-5">
+            <CartGrowthCard
+              distanceKm={outOfRange ? null : deliveryPreview.distanceKm}
+              mealType={slotType}
+            />
+          </div>
           <div className="mt-5 space-y-4">
             {items.map((item) => (
               <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl bg-muted px-4 py-3 text-sm">
                 <div className="min-w-0">
                   <p className="font-semibold">{item.name}</p>
                   <p className="text-stone-500">Qty {item.quantity}</p>
+                  <CartItemCustomization item={item} />
                 </div>
                 <span>{formatCurrency(item.price * item.quantity)}</span>
               </div>
@@ -771,96 +745,6 @@ export function CheckoutPage({
             ) : null}
           </div>
 
-          {freeDeliveryThreshold !== null && remainingAmount !== null && !outOfRange ? (
-            <div className="mt-6 rounded-3xl border border-[#eadfd3] bg-gradient-to-br from-[#fffdfb] to-[#fff4e7] p-4 sm:p-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="min-w-0 break-words font-semibold leading-6 text-stone-900">
-                  {remainingAmount > 0
-                    ? `Almost there! Add ${formatCurrency(remainingAmount)} more and we’ll deliver it free 🎉`
-                    : "Free Delivery Unlocked 🎉"}
-                </p>
-                <span className="text-sm font-semibold text-primary">
-                  {formatCurrency(subtotal)} / {formatCurrency(freeDeliveryThreshold)}
-                </span>
-              </div>
-              <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[#eadfd3]">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-primary via-[#d08b2f] to-[#e7b63e] transition-[width] duration-300"
-                  style={{ width: `${getFreeDeliveryProgress(subtotal, freeDeliveryThreshold)}%` }}
-                />
-              </div>
-              {remainingAmount > 0 ? (
-                <>
-                  <p className="mt-3 text-sm text-stone-600">Add food, not delivery fee.</p>
-                  {suggestedAddOns.length ? (
-                    <div className="mt-4">
-                      <p className="text-sm font-semibold">Unlock free delivery with:</p>
-                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                        {suggestedAddOns.map((item, index) => (
-                          <div
-                            key={item.id}
-                            className="flex min-w-0 flex-col items-stretch gap-3 rounded-2xl border border-[#eadfd3] bg-white/80 p-3 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between"
-                          >
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold">{item.name}</p>
-                              <p className="text-xs text-stone-500">
-                                {item.itemKind === "THALI"
-                                  ? "Popular Thali"
-                                  : index === 0 && remainingAmount > 30
-                                    ? "Best with Thali"
-                                    : "Most Added"} · {formatCurrency(item.price)}
-                              </p>
-                            </div>
-                            <Button type="button" size="sm" className="w-full min-[380px]:w-auto" onClick={() => addItem(item)}>
-                              Add
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-                </>
-              ) : null}
-            </div>
-          ) : null}
-
-          {suggestedItems.length ? (
-            <div className="mt-6">
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-stone-900">Make your meal more satisfying</p>
-                  <p className="mt-1 text-xs text-stone-500">Popular add-ons and matching thalis, ready in one tap.</p>
-                </div>
-              </div>
-              <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2">
-                {suggestedItems.map((item) => (
-                  <article key={item.id} className="min-w-[190px] snap-start rounded-3xl border border-border bg-[#fffaf5] p-3">
-                    <Image
-                      src={item.imageUrl}
-                      alt={item.name}
-                      width={320}
-                      height={220}
-                      className="h-24 w-full rounded-2xl object-cover"
-                      sizes="190px"
-                    />
-                    <p className="mt-3 truncate text-sm font-semibold">{item.name}</p>
-                    <div className="mt-1 flex items-center justify-between gap-2 text-xs">
-                      <span className="text-stone-500">{item.badge}</span>
-                      <span className="font-semibold text-primary">{formatCurrency(item.price)}</span>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="mt-3 w-full"
-                      onClick={() => addItem(item)}
-                    >
-                      Add to order
-                    </Button>
-                  </article>
-                ))}
-              </div>
-            </div>
-          ) : null}
         </Card>
       </div>
       {error && errorPopupOpen ? (

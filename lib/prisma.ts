@@ -59,6 +59,7 @@ type OrderItemRow = {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  customization: string | null;
 };
 
 type OrderRow = {
@@ -257,7 +258,8 @@ async function loadOrderItems(orderIds: string[], client?: DbClient) {
         "itemName" as "itemName",
         quantity,
         "unitPrice" as "unitPrice",
-        "totalPrice" as "totalPrice"
+        "totalPrice" as "totalPrice",
+        customization
       from "OrderItem"
       where "orderId" = any($1::text[])
       order by id asc
@@ -821,9 +823,10 @@ export const prisma = {
                 "itemName",
                 quantity,
                 "unitPrice",
-                "totalPrice"
+                "totalPrice",
+                customization
               )
-              values ($1, $2, $3, $4, $5, $6, $7)
+              values ($1, $2, $3, $4, $5, $6, $7, $8)
             `,
             [
               randomUUID(),
@@ -832,7 +835,8 @@ export const prisma = {
               item.itemName,
               item.quantity,
               item.unitPrice,
-              item.totalPrice
+              item.totalPrice,
+              item.customization ?? null
             ],
             client
           );

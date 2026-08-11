@@ -7,6 +7,47 @@ export const defaultKitchenCoordinates = {
   longitude: 88.380229
 };
 
+type AddOnDefinition = Omit<MenuSeed, "slug" | "mealType" | "itemKind"> & {
+  slug: string;
+};
+
+export const addOnDefinitions: AddOnDefinition[] = [
+  { name: "Roti", slug: "roti", description: "One fresh, soft roti—perfect with any curry.", price: 5, badge: "1 pc", imageUrl: "/brand/addons/roti.jpg", stockLimit: 100, components: ["1 piece"] },
+  { name: "Butter Roti", slug: "butter-roti", description: "One warm roti finished with a light touch of butter.", price: 10, badge: "1 pc", imageUrl: "/brand/addons/butter-roti.jpg", stockLimit: 100, components: ["1 piece"] },
+  { name: "Extra Rice", slug: "extra-rice", description: "One extra plate of fluffy steamed rice.", price: 20, badge: "1 plate", imageUrl: "/brand/addons/extra-rice.jpg", stockLimit: 60, components: ["1 plate"] },
+  { name: "Egg Curry", slug: "egg-curry", description: "Homestyle Bengali egg curry with two eggs.", price: 40, badge: "2 pcs", imageUrl: "/brand/addons/egg-curry.jpg", stockLimit: 40, components: ["1 plate · 2 eggs"] },
+  { name: "Katla Fish Curry", slug: "katla-fish-curry", description: "Bengali katla curry with one generous fish piece.", price: 60, badge: "1 pc", imageUrl: "/brand/addons/katla-fish-curry.jpg", stockLimit: 30, components: ["1 plate · 1 fish piece"] },
+  { name: "Rui Fish Curry", slug: "rui-fish-curry", description: "Classic rui curry with one comforting fish piece.", price: 40, badge: "1 pc", imageUrl: "/brand/addons/rui-fish-curry.jpg", stockLimit: 35, components: ["1 plate · 1 fish piece"] },
+  { name: "Chicken Curry", slug: "chicken-curry-plate", description: "Homestyle chicken curry with four pieces.", price: 90, badge: "4 pcs", imageUrl: "/brand/addons/chicken-curry.jpg", stockLimit: 30, components: ["1 plate · 4 chicken pieces"] },
+  { name: "Cholar Dal", slug: "cholar-dal", description: "A comforting plate of lightly spiced Bengali cholar dal.", price: 30, badge: "1 plate", imageUrl: "/brand/addons/cholar-dal.jpg", stockLimit: 40, components: ["1 plate"] },
+  { name: "Aloo Dum", slug: "aloo-dum", description: "Bengali aloo dum with four tender potato pieces.", price: 40, badge: "4 pcs", imageUrl: "/brand/addons/aloo-dum.jpg", stockLimit: 35, components: ["1 plate · 4 potato pieces"] },
+  { name: "Aloo Bhaja", slug: "aloo-bhaja", description: "Crisp, golden Bengali-style fried potato strips.", price: 25, badge: "1 plate", imageUrl: "/brand/addons/aloo-bhaja.jpg", stockLimit: 40, components: ["1 plate"] },
+  { name: "Bhindi Bhaja", slug: "bhindi-bhaja", description: "Lightly spiced, dry-fried okra with homestyle flavour.", price: 25, badge: "1 plate", imageUrl: "/brand/addons/bhindi-bhaja.jpg", stockLimit: 35, components: ["1 plate"] },
+  { name: "Mixed Vegetables", slug: "mixed-vegetables", description: "A colourful homestyle mix of seasonal vegetables.", price: 50, badge: "1 plate", imageUrl: "/brand/addons/mixed-vegetables.jpg", stockLimit: 35, components: ["1 plate"] },
+  { name: "Egg Omelette", slug: "egg-omelette", description: "A freshly cooked, lightly seasoned one-egg omelette.", price: 15, badge: "1 pc", imageUrl: "/brand/addons/egg-omelette.jpg", stockLimit: 50, components: ["1 egg omelette"] },
+  { name: "Milk Sewai", slug: "milk-sewai", description: "Creamy milk sewai with a gentle cardamom sweetness.", price: 50, badge: "1 plate", imageUrl: "/brand/addons/milk-sewai.jpg", stockLimit: 30, components: ["1 plate"] },
+  { name: "Egg Bhurji", slug: "egg-bhurji", description: "Fresh egg bhurji prepared with two eggs.", price: 40, badge: "2 eggs", imageUrl: "/brand/addons/egg-bhurji.jpg", stockLimit: 40, components: ["1 plate · 2 eggs"] },
+  { name: "Dhokar Dalna", slug: "dhokar-dalna-1pc", description: "Bengali dhokar dalna with one golden lentil cake.", price: 25, badge: "1 pc", imageUrl: "/brand/addons/dhokar-dalna-1pc.jpg", stockLimit: 35, components: ["1 plate · 1 piece"] },
+  { name: "Dhokar Dalna", slug: "dhokar-dalna-2pcs", description: "Bengali dhokar dalna with two golden lentil cakes.", price: 40, badge: "2 pcs", imageUrl: "/brand/addons/dhokar-dalna-2pcs.jpg", stockLimit: 35, components: ["1 plate · 2 pieces"] },
+  { name: "Paneer Curry", slug: "paneer-curry", description: "Soft paneer in a light, comforting homestyle curry.", price: 50, badge: "1 plate", imageUrl: "/brand/addons/paneer-curry.jpg", stockLimit: 30, components: ["1 plate"] },
+  { name: "Paneer Butter Masala", slug: "paneer-butter-masala", description: "Rich, creamy paneer butter masala for a fuller meal.", price: 90, badge: "1 plate", imageUrl: "/brand/addons/paneer-butter-masala.jpg", stockLimit: 25, components: ["1 plate"] },
+  { name: "Soyabean Curry", slug: "soyabean-curry", description: "Homestyle soyabean curry with warm Bengali spices.", price: 30, badge: "1 plate", imageUrl: "/brand/addons/soyabean-curry.jpg", stockLimit: 40, components: ["1 plate"] },
+  { name: "Plain Tarka", slug: "plain-tarka", description: "Creamy dhaba-style tarka dal with garlic and green chilli.", price: 50, badge: "1 plate", imageUrl: "/brand/addons/plain-tarka.jpg", stockLimit: 35, components: ["1 plate"] },
+  { name: "Egg Tarka", slug: "egg-tarka", description: "Comforting tarka dal enriched with freshly cooked egg.", price: 60, badge: "1 plate", imageUrl: "/brand/addons/egg-tarka.jpg", stockLimit: 35, components: ["1 plate"] },
+  { name: "Chicken Tarka", slug: "chicken-tarka", description: "A hearty bowl of tarka dal with tender chicken pieces.", price: 100, badge: "1 plate", imageUrl: "/brand/addons/chicken-tarka.jpg", stockLimit: 25, components: ["1 plate"] },
+  { name: "Chana Masala", slug: "chana-masala", description: "Slow-cooked chickpeas in a rich, homestyle masala.", price: 50, badge: "1 plate", imageUrl: "/brand/addons/chana-masala.jpg", stockLimit: 40, components: ["1 plate"] }
+];
+
+function buildAddOns(mealType: MenuSeed["mealType"]): MenuSeed[] {
+  const slugPrefix = mealType === "DINNER" ? "dinner-addon-" : "addon-";
+  return addOnDefinitions.map((item) => ({
+    ...item,
+    slug: `${slugPrefix}${item.slug}`,
+    mealType,
+    itemKind: "ADD_ON"
+  }));
+}
+
 export const defaultMenuItems: MenuSeed[] = [
   {
     name: "Mutton Combo",
@@ -122,7 +163,7 @@ export const defaultMenuItems: MenuSeed[] = [
     description: "Fresh vegetarian Bengali meal for everyday eating.",
     price: 89,
     badge: "Light & Comforting",
-    imageUrl: "/brand/veg-thali.jpg",
+    imageUrl: "/brand/veg-thali-v2.jpg",
     mealType: "LUNCH",
     itemKind: "THALI",
     stockLimit: 26,
@@ -206,7 +247,7 @@ export const defaultMenuItems: MenuSeed[] = [
     description: "Light vegetarian Bengali dinner.",
     price: 89,
     badge: "Veg Comfort",
-    imageUrl: "/brand/veg-thali.jpg",
+    imageUrl: "/brand/veg-thali-v2.jpg",
     mealType: "DINNER",
     itemKind: "THALI",
     stockLimit: 26,
@@ -224,102 +265,8 @@ export const defaultMenuItems: MenuSeed[] = [
     stockLimit: 20,
     components: ["Rice", "Moong daal", "Mochar Ghanto (Banana Flower)", "Paneer curry/Dhokar dalna", "Chutney/aachar", "Papad", "Salad"]
   },
-  {
-    name: "Roti",
-    slug: "addon-roti",
-    description: "Fresh soft roti to add to any meal.",
-    price: 5,
-    badge: "Add-on",
-    imageUrl: "/brand/roti-addon.jpg",
-    mealType: "LUNCH",
-    itemKind: "ADD_ON",
-    stockLimit: 100,
-    components: ["1 piece"]
-  },
-  {
-    name: "Extra Rice",
-    slug: "addon-extra-rice",
-    description: "An extra serving of steamed rice.",
-    price: 20,
-    badge: "Add-on",
-    imageUrl: "/brand/extra-rice.jpg",
-    mealType: "LUNCH",
-    itemKind: "ADD_ON",
-    stockLimit: 60,
-    components: ["1 serving"]
-  },
-  {
-    name: "Chicken Curry Plate",
-    slug: "addon-chicken-curry-plate",
-    description: "Homestyle Bengali chicken curry plate.",
-    price: 80,
-    badge: "Add-on",
-    imageUrl: "/brand/chicken-curry-plate.jpg",
-    mealType: "LUNCH",
-    itemKind: "ADD_ON",
-    stockLimit: 30,
-    components: ["Chicken Curry (4 pcs, including leg piece)"]
-  },
-  {
-    name: "Butter Parantha",
-    slug: "addon-butter-parantha",
-    description: "Golden, flaky Bengali-style butter parantha served warm.",
-    price: 10,
-    badge: "Add-on",
-    imageUrl: "https://pub-9d2bed8b98a0462bb1d4d2a1d7f9fcd6.r2.dev/menu-images/34c96396-0eac-41dd-a2f1-a08c2d77bfed.jpg",
-    mealType: "LUNCH",
-    itemKind: "ADD_ON",
-    stockLimit: 100,
-    components: ["1 piece"]
-  },
-  {
-    name: "Roti",
-    slug: "dinner-addon-roti",
-    description: "Fresh soft roti to add to any meal.",
-    price: 5,
-    badge: "Add-on",
-    imageUrl: "/brand/roti-addon.jpg",
-    mealType: "DINNER",
-    itemKind: "ADD_ON",
-    stockLimit: 100,
-    components: ["1 piece"]
-  },
-  {
-    name: "Extra Rice",
-    slug: "dinner-addon-extra-rice",
-    description: "An extra serving of steamed rice.",
-    price: 20,
-    badge: "Add-on",
-    imageUrl: "/brand/extra-rice.jpg",
-    mealType: "DINNER",
-    itemKind: "ADD_ON",
-    stockLimit: 60,
-    components: ["1 serving"]
-  },
-  {
-    name: "Chicken Curry Plate",
-    slug: "dinner-addon-chicken-curry-plate",
-    description: "Homestyle Bengali chicken curry plate.",
-    price: 80,
-    badge: "Add-on",
-    imageUrl: "/brand/chicken-curry-plate.jpg",
-    mealType: "DINNER",
-    itemKind: "ADD_ON",
-    stockLimit: 30,
-    components: ["Chicken Curry (4 pcs, including leg piece)"]
-  },
-  {
-    name: "Butter Parantha",
-    slug: "dinner-addon-butter-parantha",
-    description: "Golden, flaky Bengali-style butter parantha served warm.",
-    price: 10,
-    badge: "Add-on",
-    imageUrl: "https://pub-9d2bed8b98a0462bb1d4d2a1d7f9fcd6.r2.dev/menu-images/34c96396-0eac-41dd-a2f1-a08c2d77bfed.jpg",
-    mealType: "DINNER",
-    itemKind: "ADD_ON",
-    stockLimit: 100,
-    components: ["1 piece"]
-  }
+  ...buildAddOns("LUNCH"),
+  ...buildAddOns("DINNER")
 ];
 
 export const defaultTestimonials = [

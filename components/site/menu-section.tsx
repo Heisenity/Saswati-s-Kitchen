@@ -46,13 +46,16 @@ export function MenuSection({ items, kitchenLocation }: MenuSectionProps) {
 
   useEffect(() => {
     setAvailableAddOns(
-      [...thalis, ...addOns].map(({ id, name, price, imageUrl, badge, itemKind }) => ({
+      [...thalis, ...addOns].map(({ id, name, price, imageUrl, badge, itemKind, mealType, description, components }) => ({
         id,
         name,
         price,
         imageUrl,
         badge,
-        itemKind
+        itemKind,
+        mealType,
+        description,
+        components: components.map(({ itemName }) => itemName)
       }))
     );
   }, [items, mealType, setAvailableAddOns]);
@@ -147,10 +150,10 @@ export function MenuSection({ items, kitchenLocation }: MenuSectionProps) {
           <div className="mt-8 border-t border-border pt-6 md:mt-14 md:pt-10">
             <p className="text-sm font-semibold uppercase tracking-[0.26em] text-primary">Customise your meal</p>
             <h3 className="mt-1 font-serif text-2xl md:mt-3 md:text-3xl">Add a little extra</h3>
-            <div key={`mobile-addons-${mealType}`} className="mt-3 divide-y divide-border/80 md:hidden animate-[menu-fade_.28s_ease-out]">
+            <div data-testid="mobile-addon-list" key={`mobile-addons-${mealType}`} className="mt-3 divide-y divide-border/80 md:hidden animate-[menu-fade_.28s_ease-out]">
               {addOns.map((item) => <MobileMenuRow item={item} key={item.id} />)}
             </div>
-            <div key={`desktop-addons-${mealType}`} className="mt-7 hidden min-w-0 grid-cols-1 gap-6 md:grid md:grid-cols-2 xl:grid-cols-3 animate-[menu-fade_.28s_ease-out]">
+            <div data-testid="desktop-addon-list" key={`desktop-addons-${mealType}`} className="mt-7 hidden min-w-0 grid-cols-1 gap-6 md:grid md:grid-cols-2 xl:grid-cols-3 animate-[menu-fade_.28s_ease-out]">
               {addOns.map((item) => (
                 <MenuCard item={item} key={item.id} />
               ))}
@@ -169,7 +172,11 @@ function getCartItem(item: MenuSectionProps["items"][number]) {
     name: item.name,
     price: item.price,
     imageUrl: item.imageUrl,
-    badge: item.badge
+    badge: item.badge,
+    mealType: item.mealType,
+    itemKind: item.itemKind,
+    description: item.description,
+    components: item.components.map(({ itemName }) => itemName)
   };
 }
 
@@ -182,7 +189,7 @@ function getFoodMarker(item: MenuSectionProps["items"][number]) {
     return { label: "Non-vegetarian", className: "border-primary bg-primary" };
   }
 
-  if (/\b(veg|vegetarian|paneer|dhok|roti|rice|parantha|papad|dal|daal|sabzi|vegetable)\b/.test(content)) {
+  if (/\b(veg|vegetarian|paneer|dhok|roti|rice|parantha|papad|dal|daal|sabzi|vegetable|aloo|bhindi|chana|soyabean|sewai|tarka)\b/.test(content)) {
     return { label: "Vegetarian", className: "border-leaf bg-leaf" };
   }
 

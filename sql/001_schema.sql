@@ -91,7 +91,8 @@ create table if not exists "OrderItem" (
   "itemName" text not null,
   quantity integer not null,
   "unitPrice" integer not null,
-  "totalPrice" integer not null
+  "totalPrice" integer not null,
+  customization text
 );
 
 create index if not exists order_item_order_id_idx on "OrderItem" ("orderId");

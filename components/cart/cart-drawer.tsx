@@ -6,15 +6,10 @@ import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCart } from "@/components/cart/cart-provider";
+import { CartGrowthCard, CartItemCustomization } from "@/components/cart/cart-growth-card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
-import {
-  getFreeDeliveryProgress,
-  getFreeDeliveryThreshold,
-  getRemainingAmount,
-  getSuggestedAddOns
-} from "@/lib/delivery";
 
 export function CartDrawer() {
   const [open, setOpen] = useState(false);
@@ -24,20 +19,10 @@ export function CartDrawer() {
     subtotal,
     itemCount,
     deliveryDistanceKm,
-    availableAddOns,
-    addItem,
     updateQuantity,
     removeItem
   } = useCart();
   const hasItems = items.length > 0;
-  const freeDeliveryThreshold =
-    deliveryDistanceKm === null ? null : getFreeDeliveryThreshold(deliveryDistanceKm);
-  const remainingAmount =
-    freeDeliveryThreshold === null ? null : getRemainingAmount(subtotal, freeDeliveryThreshold);
-  const suggestedAddOns = getSuggestedAddOns(
-    remainingAmount ?? 0,
-    availableAddOns.filter((candidate) => !items.some((item) => item.id === candidate.id))
-  );
 
   useEffect(() => {
     setMounted(true);
@@ -91,6 +76,7 @@ export function CartDrawer() {
               <div className="flex-1 overflow-y-auto px-6 py-5">
                 {hasItems ? (
                   <div className="space-y-4">
+                    <CartGrowthCard distanceKm={deliveryDistanceKm} compact />
                     {items.map((item) => (
                       <div key={item.id} className="rounded-3xl border border-border bg-card p-3">
                         <div className="flex gap-3">
@@ -134,6 +120,7 @@ export function CartDrawer() {
                                 <Plus className="h-4 w-4" />
                               </button>
                             </div>
+                            <CartItemCustomization item={item} />
                           </div>
                         </div>
                       </div>
@@ -157,50 +144,6 @@ export function CartDrawer() {
                 <p className="mt-3 text-xs text-stone-600">
                   Delivery charge and 50% advance will be calculated at checkout.
                 </p>
-                {hasItems && freeDeliveryThreshold !== null && remainingAmount !== null ? (
-                  <div className="mt-4 rounded-2xl border border-[#eadfd3] bg-[#fff8ef] p-3">
-                    <div className="flex flex-col gap-1 text-xs font-semibold sm:flex-row sm:justify-between">
-                      <span className="break-words leading-5">
-                        {remainingAmount > 0
-                          ? `Almost there! Add ${formatCurrency(remainingAmount)} more and we’ll deliver it free 🎉`
-                          : "Free Delivery Unlocked 🎉"}
-                      </span>
-                      <span className="shrink-0 text-primary sm:ml-2">
-                        {formatCurrency(subtotal)} / {formatCurrency(freeDeliveryThreshold)}
-                      </span>
-                    </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#eadfd3]">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-primary to-[#e7b63e] transition-[width] duration-300"
-                        style={{ width: `${getFreeDeliveryProgress(subtotal, freeDeliveryThreshold)}%` }}
-                      />
-                    </div>
-                    {remainingAmount > 0 ? (
-                      <>
-                        <p className="mt-2 text-xs text-stone-600">Add food, not delivery fee.</p>
-                        {suggestedAddOns.length ? (
-                          <div className="mt-3 space-y-2 border-t border-[#eadfd3] pt-3">
-                            <p className="text-xs font-semibold">Unlock free delivery with:</p>
-                            {suggestedAddOns.slice(0, 3).map((item) => (
-                              <div key={item.id} className="flex min-w-0 items-center justify-between gap-2 text-xs">
-                                <span className="min-w-0 break-words leading-5">
-                                  {item.name} · {formatCurrency(item.price)}
-                                </span>
-                                <button
-                                  type="button"
-                                  className="shrink-0 rounded-full bg-primary px-3 py-1 font-semibold text-white"
-                                  onClick={() => addItem(item)}
-                                >
-                                  Add
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        ) : null}
-                      </>
-                    ) : null}
-                  </div>
-                ) : null}
                 <Link
                   href="/checkout"
                   onClick={() => setOpen(false)}

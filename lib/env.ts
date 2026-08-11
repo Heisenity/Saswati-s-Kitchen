@@ -41,6 +41,8 @@ export const env = {
   smtpFrom: process.env.SMTP_FROM ?? "orders@saswatiskitchen.in",
   geoapifyApiKey: process.env.GEOAPIFY_API_KEY,
   googleMapsBrowserKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY,
+  groqApiKey: process.env.GROQ_API_KEY,
+  groqModel: process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile",
   deliveryQuoteSecret
 };
 

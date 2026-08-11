@@ -12,6 +12,7 @@
     "clean": "rm -rf .next .next-dev",
     "build": "next build",
     "check:menu": "tsx scripts/check-menu-data.ts",
+    "check:cart": "tsx scripts/check-cart-recommendations.ts",
     "start": "next start -p 4001",
     "lint": "next lint"
   },

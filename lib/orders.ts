@@ -7,12 +7,15 @@ import type { PaymentProofAnalysis } from "@/lib/payment-proof";
 import { assertSlotAvailable } from "@/lib/slot";
 import { isDatabaseConfigured } from "@/lib/env";
 import { matchesPhone, normalizePhone } from "@/lib/phone";
+import { getMenuItems } from "@/lib/menu";
+import { sanitizeCustomization } from "@/lib/cart-customization";
 
 export type CheckoutItemInput = {
   menuItemId?: string;
   itemName: string;
   quantity: number;
   unitPrice: number;
+  customization?: string;
 };
 
 export type CreateOrderInput = {
@@ -56,10 +59,24 @@ async function resolveCustomerCoordinates(
 }
 
 export async function createOrder(input: CreateOrderInput) {
+  const menuItems = await getMenuItems();
+  const menuById = new Map(menuItems.map((item) => [item.id, item]));
+  const resolvedItems = input.items.map((item) => {
+    const canonical = item.menuItemId ? menuById.get(item.menuItemId) : null;
+    if (!canonical) throw new Error("One of the cart items is no longer available. Please refresh your cart.");
+    return {
+      menuItemId: canonical.id,
+      itemName: canonical.name,
+      quantity: item.quantity,
+      unitPrice: canonical.price,
+      customization: sanitizeCustomization(canonical.name, item.customization)
+    };
+  });
+
   if (!isDatabaseConfigured()) {
     return {
       orderNumber: buildOrderNumber(),
-      totalAmount: input.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
+      totalAmount: resolvedItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
       advanceAmount: 0,
       balanceAmount: 0
     };
@@ -74,7 +91,7 @@ export async function createOrder(input: CreateOrderInput) {
   assertSlotAvailable(settings, input.slotType);
 
   const normalizedPhone = normalizePhone(input.phone);
-  const subtotal = input.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  const subtotal = resolvedItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
   const manualDeliveryReviewRequired = Boolean(
     input.manualDeliveryReviewRequired &&
       !input.quoteId &&
@@ -140,12 +157,13 @@ export async function createOrder(input: CreateOrderInput) {
       : OrderStatus.PAYMENT_PENDING_VERIFICATION,
     paymentScreenshotUrl: input.paymentScreenshotUrl,
     items: {
-      create: input.items.map((item) => ({
+      create: resolvedItems.map((item) => ({
         menuItemId: item.menuItemId,
         itemName: item.itemName,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        totalPrice: item.quantity * item.unitPrice
+        totalPrice: item.quantity * item.unitPrice,
+        customization: item.customization
       }))
     }
   };
@@ -162,8 +180,9 @@ export async function createOrder(input: CreateOrderInput) {
     if ((input.userId || input.customerEmail) && isPrismaSchemaMismatchError(error)) {
       // ponytail: old DBs may still miss new account/contact columns; keep checkout alive until migrations are applied
       const { userId: _userId, customerEmail: _customerEmail, ...legacyOrderData } = orderData;
+      const legacyItems = legacyOrderData.items.create.map(({ customization: _customization, ...item }) => item);
       order = await prisma.order.create({
-        data: legacyOrderData,
+        data: { ...legacyOrderData, items: { create: legacyItems } },
         include: {
           items: true
         }

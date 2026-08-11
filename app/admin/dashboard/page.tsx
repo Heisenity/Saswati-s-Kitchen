@@ -33,7 +33,7 @@ export default async function AdminDashboardPage() {
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">{order.orderNumber}</p>
                 <h3 className="mt-2 font-serif text-2xl">{order.customerName}</h3>
                 <p className="mt-2 text-sm text-stone-600">
-                  {formatDateTime(order.createdAt)} · {order.items.map((item) => `${item.itemName} x${item.quantity}`).join(", ")}
+                  {formatDateTime(order.createdAt)} · {order.items.map((item) => `${item.itemName} x${item.quantity}${item.customization ? ` · ${item.customization}` : ""}`).join(", ")}
                 </p>
               </div>
               <p className="font-semibold">{formatCurrency(order.totalAmount)}</p>
