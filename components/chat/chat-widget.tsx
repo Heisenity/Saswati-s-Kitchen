@@ -102,6 +102,7 @@ export function ChatWidget() {
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [connectionError, setConnectionError] = useState("");
+  const [realtimeUnavailable, setRealtimeUnavailable] = useState(false);
   const [profileError, setProfileError] = useState("");
   const [sessionAttempt, setSessionAttempt] = useState(0);
   const [storageKey, setStorageKey] = useState(getChatStorageKey());
@@ -259,7 +260,13 @@ export function ChatWidget() {
         orderNumber: window.localStorage.getItem("saswatis-kitchen-last-order") ?? undefined
       })
     })
-      .then((response) => response.json())
+      .then(async (response) => {
+        const result = await response.json().catch(() => null);
+        if (!response.ok || !result) {
+          throw new Error(result?.error ?? "Could not start chat right now.");
+        }
+        return result;
+      })
       .then((result) => {
         if (!result.ok) {
           throw new Error(result.error ?? "Could not start chat right now.");
@@ -272,15 +279,18 @@ export function ChatWidget() {
         setPhone(result.phone ?? safePhone);
         setNameLocked(Boolean(result.nameLocked));
         setPhoneLocked(Boolean(result.phoneLocked));
+        setRealtimeUnavailable(false);
         if (!nameLocked) {
           window.localStorage.setItem(`${storageKey}:name`, result.customerName ?? safeName);
         }
         window.localStorage.setItem(`${storageKey}:phone`, result.phone ?? safePhone);
         setConnecting(false);
       })
-      .catch(() => {
+      .catch((error) => {
         setConnecting(false);
-        setConnectionError("Could not connect to chat right now. Please try again.");
+        setConnectionError(
+          error instanceof Error ? error.message : "Could not connect to chat right now. Please try again."
+        );
       });
   }, [chatId, nameLocked, open, profileReady, safeName, safePhone, sessionAttempt, storageKey]);
 
@@ -314,6 +324,43 @@ export function ChatWidget() {
   }, [chatId]);
 
   useEffect(() => {
+    if (!chatId || !profileReady) return;
+
+    let active = true;
+    const query = new URLSearchParams({
+      chatId,
+      customerName: safeName,
+      phone: safePhone
+    });
+
+    async function refreshConversation() {
+      try {
+        const response = await fetch(`/api/chat/messages?${query.toString()}`, {
+          cache: "no-store"
+        });
+        const result = (await response.json()) as {
+          ok?: boolean;
+          messages?: Message[];
+          adminOnline?: boolean;
+        };
+        if (!active || !response.ok || !result.ok) return;
+
+        setMessages(dedupeMessages(result.messages ?? []));
+        setAdminOnline(Boolean(result.adminOnline));
+      } catch {
+        // Broadcast remains the fast path. A transient polling failure should not interrupt chat.
+      }
+    }
+
+    void refreshConversation();
+    const intervalId = window.setInterval(refreshConversation, 6_000);
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
+  }, [chatId, profileReady, safeName, safePhone]);
+
+  useEffect(() => {
     if (!chatId) return;
 
     const roomChannel = supabase
@@ -330,9 +377,8 @@ export function ChatWidget() {
         }
       })
       .subscribe((status) => {
-        if (status === "CHANNEL_ERROR") {
-          setConnectionError("Could not connect to chat right now. Please try again.");
-        }
+        if (status === "SUBSCRIBED") setRealtimeUnavailable(false);
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") setRealtimeUnavailable(true);
       });
 
     const presenceChannel = supabase
@@ -595,6 +641,9 @@ export function ChatWidget() {
           ) : (
             <>
               {connectionError ? <p className="mt-4 text-xs text-primary">{connectionError}</p> : null}
+              {realtimeUnavailable ? (
+                <p className="mt-3 text-xs text-stone-500">Refreshing replies automatically…</p>
+              ) : null}
               <div
                 ref={scrollRef}
                 className="mt-4 h-80 space-y-3 overflow-y-auto rounded-3xl bg-muted p-3"

@@ -59,8 +59,8 @@ async function loadMenuItems() {
   }
 }
 
-const getCachedMenuItems = unstable_cache(loadMenuItems, ["public-menu-20260812"], {
-  revalidate: 300,
+const getCachedMenuItems = unstable_cache(loadMenuItems, ["public-menu-v3"], {
+  revalidate: 172800,
   tags: ["public-menu"]
 });
 

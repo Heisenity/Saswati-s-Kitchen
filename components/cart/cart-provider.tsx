@@ -7,6 +7,7 @@ import {
   useMemo,
   useState
 } from "react";
+import { readBrowserCache, writeBrowserCache } from "@/lib/browser-cache";
 
 export type CartItem = {
   id: string;
@@ -41,29 +42,38 @@ type CartContextValue = {
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
-const storageKey = "saswatis-kitchen-cart";
+const storageKey = "saswatis-kitchen-cart-v2";
+const legacySessionStorageKey = "saswatis-kitchen-cart";
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [cartHydrated, setCartHydrated] = useState(false);
   const [deliveryDistanceKm, setDeliveryDistanceKm] = useState<number | null>(null);
   const [availableAddOns, setAvailableAddOns] = useState<CartCandidate[]>([]);
 
   useEffect(() => {
     try {
-      const saved = window.sessionStorage.getItem(storageKey);
-      if (!saved) return;
-      const parsed = JSON.parse(saved);
+      const cached = readBrowserCache<CartItem[]>(storageKey);
+      const legacy = window.sessionStorage.getItem(legacySessionStorageKey);
+      const parsed = cached ?? (legacy ? JSON.parse(legacy) : null);
       if (Array.isArray(parsed)) {
-        setItems(parsed.filter((item) => item && typeof item.id === "string" && item.quantity > 0));
+        setItems(
+          parsed
+            .filter((item) => item && typeof item.id === "string" && Number.isInteger(item.quantity) && item.quantity > 0)
+            .slice(0, 40)
+        );
       }
     } catch {
-      // ponytail: bad session cart should not break ordering
+      // A bad cached cart should not break ordering.
+    } finally {
+      setCartHydrated(true);
     }
   }, []);
 
   useEffect(() => {
-    window.sessionStorage.setItem(storageKey, JSON.stringify(items));
-  }, [items]);
+    if (!cartHydrated) return;
+    writeBrowserCache(storageKey, items);
+  }, [cartHydrated, items]);
 
   const value = useMemo<CartContextValue>(() => {
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);

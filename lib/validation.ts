@@ -51,6 +51,12 @@ export const customerChatMessageSchema = z.object({
   clientId: z.string().optional()
 });
 
+export const customerChatPollSchema = z.object({
+  chatId: z.string().min(6),
+  customerName: z.string().min(2).max(40),
+  phone: z.string().min(10).max(16)
+});
+
 export const adminChatMessageSchema = z.object({
   chatId: z.string().min(6),
   message: z.string().min(1).max(4000),

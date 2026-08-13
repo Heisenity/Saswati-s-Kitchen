@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { findOrCreateCustomerChat } from "@/lib/chat-service";
+import { isDatabaseConfigured } from "@/lib/env";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { getOrdersForUser } from "@/lib/orders";
 import {
@@ -85,6 +86,11 @@ export async function POST(request: Request) {
       phoneLocked: identity.phoneLocked
     });
   } catch {
-    return rejectJson(400, "Could not start chat right now.");
+    return rejectJson(
+      isDatabaseConfigured() ? 400 : 503,
+      isDatabaseConfigured()
+        ? "Could not start chat right now. Please try again."
+        : "Live chat is being set up. Please try again shortly."
+    );
   }
 }

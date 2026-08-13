@@ -9,7 +9,8 @@ import { getMenuItems } from "@/lib/menu";
 import { getSettings } from "@/lib/settings";
 import { getSlotState } from "@/lib/slot";
 
-export const revalidate = 60;
+// Public storefront data is cached for 48 hours and instantly cleared by admin menu/settings edits.
+export const revalidate = 172800;
 
 export default async function HomePage() {
   const [menuItems, settings] = await Promise.all([getMenuItems(), getSettings()]);

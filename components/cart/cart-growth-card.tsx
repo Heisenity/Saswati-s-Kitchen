@@ -5,14 +5,15 @@ import { Gift, LoaderCircle, Plus, Sparkles, Truck } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "@/components/cart/cart-provider";
 import { Button } from "@/components/ui/button";
+import { FORTY_EIGHT_HOURS_MS } from "@/lib/browser-cache";
 import type { CartRecommendationResult } from "@/lib/cart-recommendations";
 import { formatCurrency } from "@/lib/utils";
 
 type RecommendationResponse = CartRecommendationResult & { ok: true };
 
 const recommendationCache = new Map<string, RecommendationResponse>();
-const localCacheKey = "saswatis-cart-meal-match-v2";
-const localCacheTtlMs = 45 * 60 * 1000;
+const localCacheKey = "saswatis-cart-meal-match-v3";
+const localCacheTtlMs = FORTY_EIGHT_HOURS_MS;
 const maxCachedMatches = 18;
 
 type StoredRecommendation = {

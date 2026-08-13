@@ -239,6 +239,14 @@ export function AdminChatPanel() {
       });
     }, 30_000);
 
+    // Supabase Broadcast is instant when available. This light fallback keeps the
+    // admin inbox live even if a browser, network, or Realtime subscription drops.
+    const refreshId = window.setInterval(() => {
+      void fetchThreads();
+      const activeId = activeThreadIdRef.current;
+      if (activeId) void openThread({ id: activeId } as Thread);
+    }, 6_000);
+
     const discoveryChannel = supabase
       .channel("chat-admin-discovery", {
         config: { broadcast: { self: true } }
@@ -252,6 +260,7 @@ export function AdminChatPanel() {
 
     return () => {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+      window.clearInterval(refreshId);
       void fetch("/api/admin/chat/presence", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -48,6 +48,26 @@ button {
   @apply px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-24;
 }
 
+/*
+ * Android browsers disagree about the visual viewport when their browser bars
+ * expand or collapse. Keep the mobile hero exactly below our 68px header and
+ * let the inner card fill that space; this prevents an empty section after the
+ * bridge on Motorola Edge, Chrome, and Samsung Internet.
+ */
+@media (max-width: 639px) {
+  .mobile-hero-viewport {
+    height: calc(100svh - 4.25rem);
+    min-height: calc(100svh - 4.25rem);
+  }
+
+  @supports (height: 100dvh) {
+    .mobile-hero-viewport {
+      height: calc(100dvh - 4.25rem);
+      min-height: calc(100dvh - 4.25rem);
+    }
+  }
+}
+
 .bridge-grid {
   background-image:
     linear-gradient(rgba(181, 30, 30, 0.05) 1px, transparent 1px),

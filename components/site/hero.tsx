@@ -53,19 +53,19 @@ function PlaqueLeaf({ className }: { className: string }) {
 
 export function Hero() {
   return (
-    <section className="relative h-[calc(100svh-4.25rem)] overflow-hidden px-4 py-3 sm:h-auto sm:px-6 sm:pb-14 sm:pt-6 lg:px-8 lg:pb-16 lg:pt-8">
+    <section className="mobile-hero-viewport relative overflow-hidden px-4 py-3 sm:h-auto sm:min-h-0 sm:px-6 sm:pb-14 sm:pt-6 lg:px-8 lg:pb-16 lg:pt-8">
       <div className="absolute inset-x-0 top-10 mx-auto hidden max-w-6xl opacity-30 lg:block">
         <Image src="/brand/howrah-line.svg" alt="" width={1200} height={400} className="w-full" />
       </div>
 
-      <div className="mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[0.98fr_1.02fr]">
+      <div className="mx-auto grid h-full max-w-7xl items-center gap-8 lg:h-auto lg:grid-cols-[0.98fr_1.02fr]">
         <div className="h-full sm:hidden">
           <div className="relative isolate flex h-full flex-col overflow-hidden rounded-[34px] border border-[#be7d2d]/60 bg-[#fff6e7] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.58),0_8px_24px_rgba(105,64,20,0.06)]">
             <span aria-hidden="true" className="pointer-events-none absolute inset-[3px] z-[1] rounded-[30px] border border-white/45" />
             <BotanicalSprig className="pointer-events-none absolute -left-8 top-[34%] z-[1] h-28 w-28 text-[#bd8536]/20" />
             <BotanicalSprig className="pointer-events-none absolute -right-9 top-5 z-[1] h-32 w-32 -scale-x-100 rotate-6 text-[#bd8536]/18" />
 
-            <div className="relative z-10 flex min-h-0 flex-1 flex-col px-4 pb-3 pt-[clamp(1.25rem,3svh,2.25rem)] text-center min-[390px]:px-5">
+            <div className="relative z-10 flex h-[60%] min-h-0 shrink-0 flex-col px-4 pb-3 pt-[clamp(1.25rem,3svh,2.25rem)] text-center min-[390px]:px-5">
               <div className="flex items-center justify-center gap-1.5">
                 <span aria-hidden="true" className="text-lg leading-none text-[#c58a35]/75">❧</span>
                 <Badge
@@ -99,7 +99,7 @@ export function Hero() {
               </p>
             </div>
 
-            <div className="relative h-[clamp(12rem,36svh,18rem)] shrink-0 overflow-hidden">
+            <div className="relative h-[40%] shrink-0 overflow-hidden">
               <Image
                 src="/brand/howrah-bridge-sunrise.png"
                 alt="Howrah Bridge over the Hooghly River at golden hour"

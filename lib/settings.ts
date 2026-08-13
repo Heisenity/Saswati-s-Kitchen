@@ -42,7 +42,7 @@ async function loadSettings() {
 }
 
 const getCachedSettings = unstable_cache(loadSettings, ["site-settings"], {
-  revalidate: 300,
+  revalidate: 172800,
   tags: ["site-settings"]
 });
 

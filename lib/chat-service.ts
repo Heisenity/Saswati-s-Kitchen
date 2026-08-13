@@ -1,4 +1,4 @@
-import { dbQuery, prisma } from "@/lib/prisma";
+import { dbQuery, isPrismaSchemaMismatchError, prisma } from "@/lib/prisma";
 import {
   isLikelyHumanName,
   isValidIndianMobile,
@@ -87,17 +87,24 @@ async function broadcast(topic: string, event: string, payload: Record<string, u
 }
 
 export async function isAnyAdminOnline() {
-  const { rows } = await dbQuery<{ online: boolean }>(
-    `
-      select exists(
-        select 1
-        from "AdminPresence"
-        where "onlineStatus" = true
-      ) as online
-    `
-  );
+  try {
+    const { rows } = await dbQuery<{ online: boolean }>(
+      `
+        select exists(
+          select 1
+          from "AdminPresence"
+          where "onlineStatus" = true
+        ) as online
+      `
+    );
 
-  return Boolean(rows[0]?.online);
+    return Boolean(rows[0]?.online);
+  } catch (error) {
+    // Presence should never prevent a customer from opening or using a saved chat.
+    // Older deployments may not yet have the optional presence table.
+    if (isPrismaSchemaMismatchError(error)) return false;
+    throw error;
+  }
 }
 
 async function getUnreadCounts() {
@@ -180,6 +187,38 @@ export async function findOrCreateCustomerChat(input: {
     messages: (hydrated.messages ?? []).map((message: any) =>
       mapMessage(message, hydrated.customerName)
     )
+  };
+}
+
+export async function getCustomerChatThread(input: {
+  chatId: string;
+  customerName: string;
+  phone: string;
+}) {
+  const customerName = sanitizeHumanName(input.customerName);
+  const phone = normalizeIndianMobile(input.phone);
+
+  if (!isLikelyHumanName(customerName) || !isValidIndianMobile(phone)) {
+    throw new Error("Invalid customer details.");
+  }
+
+  const chat = await prisma.chat.findUnique({
+    where: { id: input.chatId },
+    include: { messages: true }
+  });
+
+  if (
+    !chat ||
+    chat.customerName.toLowerCase() !== customerName.toLowerCase() ||
+    normalizeIndianMobile(chat.phone) !== phone
+  ) {
+    throw new Error("Chat not found.");
+  }
+
+  return {
+    chatId: chat.id,
+    adminOnline: await isAnyAdminOnline(),
+    messages: (chat.messages ?? []).map((message: any) => mapMessage(message, chat.customerName))
   };
 }
 

@@ -81,6 +81,9 @@ const nextConfig = {
     ];
   },
   images: {
+    // Optimized menu and hero photos are stable public assets. Reuse them for
+    // 48 hours instead of re-optimizing the same image for every visit.
+    minimumCacheTTL: 172800,
     remotePatterns: [
       {
         protocol: "https",

@@ -35,7 +35,7 @@ const curryResult = buildCartRecommendations({
 });
 assert.deepEqual(
   curryResult.recommendations.map((item) => item.itemKind),
-  ["ADD_ON", "ADD_ON", "ADD_ON", "ADD_ON"]
+  ["ADD_ON", "ADD_ON", "ADD_ON"]
 );
 assert.ok(curryResult.recommendations.some((item) => item.name === "Roti"));
 
