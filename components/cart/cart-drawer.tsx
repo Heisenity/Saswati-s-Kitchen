@@ -6,7 +6,7 @@ import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCart } from "@/components/cart/cart-provider";
-import { CartGrowthCard, CartItemCustomization } from "@/components/cart/cart-growth-card";
+import { CartGrowthCard } from "@/components/cart/cart-growth-card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
@@ -120,7 +120,6 @@ export function CartDrawer() {
                                 <Plus className="h-4 w-4" />
                               </button>
                             </div>
-                            <CartItemCustomization item={item} />
                           </div>
                         </div>
                       </div>

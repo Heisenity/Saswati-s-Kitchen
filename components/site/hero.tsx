@@ -53,75 +53,77 @@ function PlaqueLeaf({ className }: { className: string }) {
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden px-4 pb-4 pt-5 sm:px-6 sm:pb-14 sm:pt-6 lg:px-8 lg:pb-16 lg:pt-8">
+    <section className="relative h-[calc(100svh-4.25rem)] overflow-hidden px-4 py-3 sm:h-auto sm:px-6 sm:pb-14 sm:pt-6 lg:px-8 lg:pb-16 lg:pt-8">
       <div className="absolute inset-x-0 top-10 mx-auto hidden max-w-6xl opacity-30 lg:block">
         <Image src="/brand/howrah-line.svg" alt="" width={1200} height={400} className="w-full" />
       </div>
 
       <div className="mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[0.98fr_1.02fr]">
-        <div className="sm:hidden">
-          <div className="relative isolate overflow-hidden rounded-[34px] border border-[#be7d2d]/60 bg-[#fff6e7] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.58),0_8px_24px_rgba(105,64,20,0.06)]">
+        <div className="h-full sm:hidden">
+          <div className="relative isolate flex h-full flex-col overflow-hidden rounded-[34px] border border-[#be7d2d]/60 bg-[#fff6e7] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.58),0_8px_24px_rgba(105,64,20,0.06)]">
             <span aria-hidden="true" className="pointer-events-none absolute inset-[3px] z-[1] rounded-[30px] border border-white/45" />
-            <BotanicalSprig className="pointer-events-none absolute -left-8 top-36 z-[1] h-36 w-32 text-[#bd8536]/20" />
-            <BotanicalSprig className="pointer-events-none absolute -right-9 top-7 z-[1] h-40 w-36 -scale-x-100 rotate-6 text-[#bd8536]/18" />
+            <BotanicalSprig className="pointer-events-none absolute -left-8 top-[34%] z-[1] h-28 w-28 text-[#bd8536]/20" />
+            <BotanicalSprig className="pointer-events-none absolute -right-9 top-5 z-[1] h-32 w-32 -scale-x-100 rotate-6 text-[#bd8536]/18" />
 
-            <div className="relative z-10 px-4 pb-2 pt-[3.35rem] text-center min-[390px]:px-5 min-[412px]:pt-[3.65rem]">
+            <div className="relative z-10 flex min-h-0 flex-1 flex-col px-4 pb-3 pt-[clamp(1.25rem,3svh,2.25rem)] text-center min-[390px]:px-5">
               <div className="flex items-center justify-center gap-1.5">
                 <span aria-hidden="true" className="text-lg leading-none text-[#c58a35]/75">❧</span>
                 <Badge
-                  className="justify-center border-[#b86833]/50 bg-[#fff9ef]/85 px-4 py-2 text-[0.93rem] font-semibold normal-case tracking-[-0.01em] text-[#9f3828] shadow-[0_4px_12px_rgba(119,66,24,0.08)] min-[390px]:px-5 min-[390px]:text-base"
+                  className="justify-center border-[#b86833]/50 bg-[#fff9ef]/85 px-4 py-[clamp(0.42rem,1.1svh,0.6rem)] text-[clamp(0.86rem,2.1svh,1rem)] font-semibold normal-case tracking-[-0.01em] text-[#9f3828] shadow-[0_4px_12px_rgba(119,66,24,0.08)] min-[390px]:px-5"
                 >
                   <span lang="bn">আজই রান্না, আজই ডেলিভারি</span>
                 </Badge>
                 <span aria-hidden="true" className="-scale-x-100 text-lg leading-none text-[#c58a35]/75">❧</span>
               </div>
 
-              <h1
-                lang="bn"
-                className="mx-auto mt-12 max-w-[21rem] text-[clamp(2.5rem,11vw,3.15rem)] font-medium leading-[1.02] tracking-[-0.035em] text-[#28180d]"
-                style={{ fontFamily: '"Noto Serif Bengali", "Bangla MN", "Kohinoor Bangla", "Nirmala UI", serif' }}
-              >
-                <span className="block">ঘরের স্বাদ,</span>
-                <span className="mt-1 block">আজই আপনার <span className="text-[#a93a22]">টেবিলে।</span></span>
-              </h1>
+              <div className="flex min-h-0 flex-1 items-center justify-center py-[clamp(0.45rem,1.5svh,1.15rem)]">
+                <h1
+                  lang="bn"
+                  className="mx-auto max-w-[21rem] text-[clamp(2.05rem,6.6svh,2.9rem)] font-medium leading-[1.02] tracking-[-0.035em] text-[#28180d]"
+                  style={{ fontFamily: '"Noto Serif Bengali", "Bangla MN", "Kohinoor Bangla", "Nirmala UI", serif' }}
+                >
+                  <span className="block">ঘরের স্বাদ,</span>
+                  <span className="mt-1 block">আজই আপনার <span className="text-[#a93a22]">টেবিলে।</span></span>
+                </h1>
+              </div>
 
-              <div className="mt-7">
+              <div>
                 <LotusDivider />
               </div>
 
               <p
                 lang="bn"
-                className="mx-auto mt-6 max-w-[20rem] text-[0.98rem] leading-[1.7] text-[#49382c]/85 min-[390px]:text-[1.04rem]"
+                className="mx-auto mt-[clamp(0.65rem,1.8svh,1.15rem)] max-w-[21rem] text-[clamp(0.83rem,2.15svh,1rem)] leading-[1.42] text-[#49382c]/85"
               >
-                আজকের রান্না আজই—পছন্দের স্বাদ ফুরিয়ে যাওয়ার আগেই অর্ডার করুন।
+                আজকের রান্না আজই—<br />পছন্দের স্বাদ ফুরোনোর আগেই অর্ডার করুন।
               </p>
             </div>
 
-            <div className="relative mt-1 h-[clamp(21rem,92vw,25rem)] overflow-hidden">
+            <div className="relative h-[clamp(12rem,36svh,18rem)] shrink-0 overflow-hidden">
               <Image
                 src="/brand/howrah-bridge-sunrise.png"
                 alt="Howrah Bridge over the Hooghly River at golden hour"
                 fill
-                className="object-cover object-[60%_58%] min-[412px]:object-[63%_58%]"
+                className="object-cover object-[62%_70%] min-[412px]:object-[64%_70%]"
                 sizes="(max-width: 639px) calc(100vw - 2rem), 0px"
                 quality={84}
                 priority
               />
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[58%]"
-                style={{ background: "linear-gradient(to bottom, #fff6e7 0%, rgba(255,246,231,.96) 18%, rgba(255,246,231,.72) 42%, rgba(255,246,231,.2) 70%, transparent 100%)" }}
+                className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[42%]"
+                style={{ background: "linear-gradient(to bottom, #fff6e7 0%, rgba(255,246,231,.88) 20%, rgba(255,246,231,.38) 55%, transparent 100%)" }}
               />
               <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(180deg,rgba(232,157,65,0.03),rgba(125,68,20,0.09))]" />
               <BotanicalSprig className="pointer-events-none absolute -left-7 top-7 z-[2] h-24 w-24 rotate-[78deg] text-[#bd8536]/15" />
 
-              <div className="absolute left-1/2 top-[29%] z-[3] w-max max-w-[calc(100%-6rem)] -translate-x-1/2 rounded-[24px] border border-[#be7d2d]/65 bg-[#fff6e7]/85 px-7 py-3.5 text-center shadow-[0_8px_22px_rgba(78,42,12,0.1)] backdrop-blur-[6px]">
+              <div className="absolute left-1/2 top-[12%] z-[3] w-max max-w-[calc(100%-4rem)] -translate-x-1/2 rounded-[20px] border border-[#be7d2d]/65 bg-[#fff6e7]/85 px-5 py-2.5 text-center shadow-[0_8px_22px_rgba(78,42,12,0.1)] backdrop-blur-[6px]">
                 <span aria-hidden="true" className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[58%] bg-[#fff6e7] px-2 text-sm text-[#bd8536]">✦</span>
                 <PlaqueLeaf className="pointer-events-none absolute bottom-1 left-1 h-8 w-10 text-[#bd8536]/45" />
                 <PlaqueLeaf className="pointer-events-none absolute bottom-1 right-1 h-8 w-10 -scale-x-100 text-[#bd8536]/45" />
                 <p
                   lang="bn"
-                  className="relative z-10 whitespace-nowrap text-[1.08rem] text-[#76502d] min-[390px]:text-[1.18rem]"
+                  className="relative z-10 whitespace-nowrap text-[clamp(0.92rem,2.4svh,1.1rem)] text-[#76502d]"
                   style={{ fontFamily: '"Noto Serif Bengali", "Bangla MN", "Kohinoor Bangla", "Nirmala UI", serif' }}
                 >
                   ঘরের স্বাদ, মনের টানে

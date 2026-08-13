@@ -4,9 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, CircleCheck, Copy, LocateFixed, LoaderCircle } from "lucide-react";
+import { Check, ChevronRight, CircleCheck, Copy, LocateFixed, LoaderCircle, MapPin, Minus, Plus, X } from "lucide-react";
 import { useCart } from "@/components/cart/cart-provider";
-import { CartGrowthCard, CartItemCustomization } from "@/components/cart/cart-growth-card";
+import { CartGrowthCard } from "@/components/cart/cart-growth-card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -132,7 +132,7 @@ export function CheckoutPage({
   slotState
 }: CheckoutPageProps) {
   const router = useRouter();
-  const { items, subtotal, clearCart, setDeliveryDistanceKm } = useCart();
+  const { items, subtotal, clearCart, setDeliveryDistanceKm, updateQuantity } = useCart();
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState(initialCustomerEmail);
   const [phone, setPhone] = useState("");
@@ -150,6 +150,7 @@ export function CheckoutPage({
   const [confirmationOrderNumber, setConfirmationOrderNumber] = useState<string | null>(null);
   const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuote | null>(null);
   const [upiCopied, setUpiCopied] = useState(false);
+  const [addressSheetOpen, setAddressSheetOpen] = useState(false);
   const latestUploadRequest = useRef(0);
   const addressQuery = useMemo(
     () => [address.trim(), landmark.trim()].filter(Boolean).join(", "),
@@ -242,7 +243,9 @@ export function CheckoutPage({
           ...bestMatch,
           source: "gps"
         });
+        setAddress((current) => current.trim() || "Current GPS location");
         setDeliveryQuote(null);
+        setAddressSheetOpen(false);
         return;
       }
 
@@ -306,6 +309,7 @@ export function CheckoutPage({
       message:
         "Prefer not to share live location? Place the order now with just the meal advance. Our team will confirm delivery charges manually after checkout."
     });
+    setAddressSheetOpen(false);
   }
 
   async function handlePaymentProofChange(nextFile: File | null) {
@@ -464,10 +468,20 @@ export function CheckoutPage({
     }
   }
 
+  const locationLabel = hasLocation
+    ? `${location.source === "gps" ? "Current location" : "Saved address"}${deliveryPreview.distanceKm !== null ? ` · ${deliveryPreview.distanceKm.toFixed(1)} km away` : ""}`
+    : isManualDeliveryReview
+      ? "Address saved · delivery charge confirmed after order"
+      : "Use current location or enter manually";
+
+  const checkoutReady =
+    !submitting && !uploadingProof && !locating && items.length > 0 && Boolean(slotState.activeSlot) &&
+    (hasLocation || isManualDeliveryReview) && !outOfRange && Boolean(uploadedProof?.url);
+
   return (
     <div className="section-padding w-full max-w-full overflow-hidden">
       <div className="mx-auto grid w-full min-w-0 max-w-7xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <form onSubmit={handleSubmit} className="order-2 min-w-0 space-y-6 lg:order-1">
+        <form id="checkout-form" onSubmit={handleSubmit} className="order-2 min-w-0 space-y-6 pb-20 lg:order-1 lg:pb-0">
           <Card className="min-w-0 p-4 sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -511,79 +525,10 @@ export function CheckoutPage({
                 required
               />
             </div>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div className="mt-4 hidden grid gap-4 md:grid-cols-2 sm:grid">
               <Input placeholder="Landmark" value={landmark} onChange={(event) => setLandmark(event.target.value)} />
-              <select
-                className="h-12 rounded-2xl border border-border bg-white px-4 text-sm"
-                value={slotType}
-                onChange={(event) => setSlotType(event.target.value as "LUNCH" | "DINNER")}
-              >
-                <option value="LUNCH">Lunch</option>
-                <option value="DINNER">Dinner</option>
-              </select>
-            </div>
-            <div className="mt-4">
-              <Textarea
-                placeholder="Full address"
-                value={address}
-                onChange={(event) => {
-                  const nextAddress = event.target.value;
-                  setAddress(nextAddress);
-                  if (!nextAddress.trim()) {
-                    setDeliveryQuote(null);
-                  }
-                }}
-                required
-              />
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={resolveAddressLocation}
-                  disabled={locating}
-                >
-                  Use this address
-                </Button>
-                <span className="text-xs text-stone-500">
-                  Prefer not to share live location? Use your typed address and we will confirm delivery charges manually after checkout.
-                </span>
-              </div>
-              {deliveryQuote ? (
-                <div className="mt-3 rounded-2xl border border-leaf/20 bg-leaf/10 px-4 py-3 text-xs leading-6 text-leaf">
-                  {deliveryQuote.message}
-                </div>
-              ) : null}
-            </div>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <Button type="button" variant="outline" onClick={detectLocation} disabled={locating}>
-                {locating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <LocateFixed className="mr-2 h-4 w-4" />}
-                {locating ? "Locating..." : "Locate Me"}
-              </Button>
-              <span className="text-sm text-stone-600">{slotState.label}</span>
-              {hasLocation ? (
-                <span className="rounded-full bg-leaf/10 px-3 py-2 text-xs font-semibold text-leaf">
-                  {location.source === "gps" ? "GPS locked" : "Address matched"}
-                  {location.accuracy ? ` (±${Math.round(location.accuracy)} m)` : ""}
-                </span>
-              ) : null}
-              {location.accuracy && location.accuracy > 120 ? (
-                <span className="text-xs text-stone-500">
-                  Accuracy is a bit low. Tap location again near a window for a better delivery estimate.
-                </span>
-              ) : null}
-              {!hasLocation && !locating ? (
-                <span className="text-xs text-stone-500">
-                  {isManualDeliveryReview
-                    ? "Your order keeps moving with subtotal-only advance. We will confirm delivery charges manually after checkout."
-                    : "Tap Locate Me for an instant exact delivery quote, or continue with your typed address for manual delivery confirmation."}
-                </span>
-              ) : null}
-              {outOfRange ? (
-                <span className="rounded-full bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">
-                  We are coming soon to your location.
-                </span>
-              ) : null}
+              <select className="h-12 rounded-2xl border border-border bg-white px-4 text-sm" value={slotType} onChange={(event) => setSlotType(event.target.value as "LUNCH" | "DINNER")}><option value="LUNCH">Lunch</option><option value="DINNER">Dinner</option></select>
+              <div className="md:col-span-2"><Textarea placeholder="Full address" value={address} onChange={(event) => setAddress(event.target.value)} required /><div className="mt-3 flex items-center gap-3"><Button type="button" size="sm" variant="outline" onClick={detectLocation} disabled={locating}>{locating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <LocateFixed className="mr-2 h-4 w-4" />}{locating ? "Locating..." : "Locate Me"}</Button><Button type="button" size="sm" variant="outline" onClick={resolveAddressLocation}>Use this address</Button></div></div>
             </div>
           </Card>
 
@@ -643,17 +588,10 @@ export function CheckoutPage({
           )}
 
           <Button
-            className="w-full"
+            className="hidden w-full sm:flex"
             size="lg"
             disabled={
-              submitting ||
-              uploadingProof ||
-              locating ||
-              items.length === 0 ||
-              !slotState.activeSlot ||
-              (!hasLocation && !isManualDeliveryReview) ||
-              outOfRange ||
-              !uploadedProof?.url
+              !checkoutReady
             }
           >
             {submitting || uploadingProof ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -667,20 +605,36 @@ export function CheckoutPage({
             <CartGrowthCard
               distanceKm={outOfRange ? null : deliveryPreview.distanceKm}
               mealType={slotType}
+              variant="rail"
             />
           </div>
-          <div className="mt-5 space-y-4">
+          <p className="mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-primary sm:hidden">Your order</p>
+          <div className="mt-3 space-y-3 sm:mt-5 sm:space-y-4">
             {items.map((item) => (
               <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl bg-muted px-4 py-3 text-sm">
                 <div className="min-w-0">
                   <p className="font-semibold">{item.name}</p>
-                  <p className="text-stone-500">Qty {item.quantity}</p>
-                  <CartItemCustomization item={item} />
+                  <p className="mt-1 text-stone-500">{formatCurrency(item.price)}</p>
+                  <div className="mt-2 flex items-center gap-2 sm:hidden"><button type="button" className="grid h-7 w-7 place-items-center rounded-full border border-border" onClick={() => updateQuantity(item.id, item.quantity - 1)} aria-label={`Remove one ${item.name}`}><Minus className="h-3.5 w-3.5" /></button><span className="min-w-5 text-center text-xs font-semibold">{item.quantity}</span><button type="button" className="grid h-7 w-7 place-items-center rounded-full border border-border" onClick={() => updateQuantity(item.id, item.quantity + 1)} aria-label={`Add one ${item.name}`}><Plus className="h-3.5 w-3.5" /></button></div>
                 </div>
                 <span>{formatCurrency(item.price * item.quantity)}</span>
               </div>
             ))}
             {items.length === 0 ? <p className="text-sm text-stone-500">No items in cart.</p> : null}
+          </div>
+
+          <div className="mt-6 space-y-3 sm:hidden">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Delivery details</p>
+            <button type="button" onClick={() => setAddressSheetOpen(true)} className="flex w-full items-center gap-3 rounded-2xl border border-border bg-white px-4 py-4 text-left shadow-[0_1px_0_rgba(255,255,255,.9)]">
+              <MapPin className="h-5 w-5 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-foreground">{hasLocation || isManualDeliveryReview ? "Delivery to" : "Add delivery address"}</span><span className="mt-0.5 block text-xs leading-5 text-stone-500">{hasLocation || isManualDeliveryReview ? locationLabel : "Tap Locate Me to see delivery options and your exact fee."}</span></span>
+              <ChevronRight className="h-5 w-5 text-stone-400" />
+            </button>
+            <div className="flex items-center gap-3 rounded-2xl border border-border bg-white px-4 py-3 shadow-[0_1px_0_rgba(255,255,255,.9)]">
+              <span className="text-lg">🕐</span><span className="flex-1 text-sm font-semibold">Delivery slot</span>
+              <select className="bg-transparent text-right text-sm text-stone-600 outline-none" value={slotType} onChange={(event) => setSlotType(event.target.value as "LUNCH" | "DINNER")}><option value="LUNCH">Lunch</option><option value="DINNER">Dinner</option></select>
+            </div>
+            {outOfRange ? <p className="rounded-2xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">We look forward to serving your area soon.</p> : null}
           </div>
 
           <div className="mt-6 space-y-3 rounded-3xl border border-border bg-white p-5 text-sm">
@@ -691,41 +645,25 @@ export function CheckoutPage({
             <div className="flex justify-between">
               <span>Delivery charge</span>
               <span>
-                {isManualDeliveryReview
-                  ? "Manually calculated by admin"
-                  : hasLocation
-                    ? formatCurrency(deliveryPreview.deliveryCharge)
-                    : "Choose GPS or manual address"}
+                {isManualDeliveryReview ? "Confirmed after order" : hasLocation ? formatCurrency(deliveryPreview.deliveryCharge) : "Add delivery address"}
               </span>
             </div>
             <div className="flex justify-between">
               <span>Total</span>
               <span className="font-semibold">
-                {isManualDeliveryReview
-                  ? formatCurrency(deliveryPreview.total)
-                  : hasLocation
-                    ? formatCurrency(deliveryPreview.total)
-                    : "Choose GPS or manual address"}
+                {isManualDeliveryReview || hasLocation ? formatCurrency(deliveryPreview.total) : formatCurrency(subtotal)}
               </span>
             </div>
             <div className="flex justify-between text-primary">
               <span>50% advance</span>
               <span className="font-semibold">
-                {isManualDeliveryReview
-                  ? formatCurrency(deliveryPreview.advance)
-                  : hasLocation
-                    ? formatCurrency(deliveryPreview.advance)
-                    : "Choose GPS or manual address"}
+                {isManualDeliveryReview || hasLocation ? formatCurrency(deliveryPreview.advance) : formatCurrency(Math.ceil(subtotal / 2))}
               </span>
             </div>
             <div className="flex justify-between">
               <span>Balance amount</span>
               <span>
-                {isManualDeliveryReview
-                  ? formatCurrency(deliveryPreview.balance)
-                  : hasLocation
-                    ? formatCurrency(deliveryPreview.balance)
-                    : "Choose GPS or manual address"}
+                {isManualDeliveryReview || hasLocation ? formatCurrency(deliveryPreview.balance) : formatCurrency(subtotal - Math.ceil(subtotal / 2))}
               </span>
             </div>
             <div className="flex justify-between">
@@ -747,6 +685,26 @@ export function CheckoutPage({
 
         </Card>
       </div>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e6d5c2] bg-[#fffaf5]/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
+        <Button type="submit" form="checkout-form" className="h-12 w-full justify-between px-5" disabled={!checkoutReady}>
+          <span>{formatCurrency(isManualDeliveryReview || hasLocation ? deliveryPreview.advance : Math.ceil(subtotal / 2))} advance</span><span>Continue <ChevronRight className="ml-1 inline h-4 w-4" /></span>
+        </Button>
+      </div>
+      {addressSheetOpen ? (
+        <div className="fixed inset-0 z-[70] flex items-end bg-stone-950/40 sm:hidden" role="dialog" aria-modal="true" aria-label="Delivery address">
+          <button type="button" aria-label="Close address form" className="absolute inset-0" onClick={() => setAddressSheetOpen(false)} />
+          <section className="relative w-full rounded-t-[30px] bg-[#fffaf5] p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl">
+            <div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Delivery location</p><h2 className="mt-1 font-serif text-2xl text-foreground">Where should we deliver?</h2></div><button type="button" className="grid h-9 w-9 place-items-center rounded-full border border-border" onClick={() => setAddressSheetOpen(false)} aria-label="Close"><X className="h-4 w-4" /></button></div>
+            <Button type="button" variant="outline" className="mt-5 h-auto w-full justify-start rounded-2xl px-4 py-4 text-left" onClick={detectLocation} disabled={locating}>{locating ? <LoaderCircle className="mr-3 h-5 w-5 animate-spin text-primary" /> : <LocateFixed className="mr-3 h-5 w-5 text-primary" />}<span><span className="block font-semibold">Use my current location</span><span className="mt-1 block text-xs font-normal text-stone-500">See delivery availability and your exact fee instantly</span></span></Button>
+            <div className="my-5 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-400"><span className="h-px flex-1 bg-border" />or<span className="h-px flex-1 bg-border" /></div>
+            <p className="text-sm font-semibold text-foreground">Enter address manually</p>
+            <Textarea className="mt-3" placeholder="Full address" value={address} onChange={(event) => { setAddress(event.target.value); if (!event.target.value.trim()) setDeliveryQuote(null); }} />
+            <Input className="mt-3" placeholder="Landmark / flat number (optional)" value={landmark} onChange={(event) => setLandmark(event.target.value)} />
+            <Button type="button" className="mt-4 w-full" onClick={resolveAddressLocation} disabled={addressQuery.length < 8}>Save address</Button>
+            {deliveryQuote ? <p className="mt-3 rounded-2xl bg-leaf/10 px-3 py-2 text-xs leading-5 text-leaf">{deliveryQuote.message}</p> : null}
+          </section>
+        </div>
+      ) : null}
       {error && errorPopupOpen ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/45 px-4"

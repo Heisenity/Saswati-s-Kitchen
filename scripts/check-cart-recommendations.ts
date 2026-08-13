@@ -39,4 +39,13 @@ assert.deepEqual(
 );
 assert.ok(curryResult.recommendations.some((item) => item.name === "Roti"));
 
+const muttonResult = buildCartRecommendations({
+  cart: [{ id: "sunday-mutton-combo", quantity: 1 }],
+  catalog,
+  distanceKm: null
+});
+assert.ok(muttonResult.recommendations.some((item) => item.name === "Roti"));
+assert.ok(!muttonResult.recommendations.some((item) => item.name === "Milk Sewai"));
+assert.ok(!muttonResult.recommendations.some((item) => /dalna|curry|tarka|dum|masala/i.test(item.name)));
+
 console.log("Cart recommendation check passed.");

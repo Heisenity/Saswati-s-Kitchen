@@ -3,8 +3,8 @@ import type { CartRecommendationResult } from "@/lib/cart-recommendations";
 import { env } from "@/lib/env";
 
 const copySchema = z.object({
-  headline: z.string().min(8).max(110),
-  supportingCopy: z.string().min(8).max(180),
+  headline: z.string().min(8).max(72),
+  supportingCopy: z.string().min(8).max(130),
   reasons: z.array(z.object({
     id: z.string().min(1),
     reason: z.string().min(6).max(100)
@@ -38,7 +38,7 @@ export async function personalizeCartCopy(result: CartRecommendationResult) {
           {
             role: "system",
             content:
-              "You write warm, concise Bengali-English cart copy for a Bengali home-food kitchen. Return JSON only with headline, supportingCopy, and reasons [{id,reason}]. Read the cart context to adapt the copy to what the customer has actually chosen: their meal style, dietary pattern, whether they appear to be sharing, and the components already covered. Use the exact rupee facts supplied. Never invent popularity, scarcity, discounts, savings, ingredients, prices, delivery promises, urgency, or knowledge about the customer beyond this cart. Be emotionally warm and encouraging—make the meal feel thoughtfully complete—without guilt, pressure, or deception. Each reason must describe why that exact food complements the cart."
+              "You write warm, extremely concise Benglish cart copy for a Bengali home-food kitchen. Return JSON only with headline, supportingCopy, and reasons [{id,reason}]. This card is a SMART MEAL MATCH, never a delivery-charge campaign: focus on why the selected food completes the meal, not on cart value or free delivery. Benglish means simple, natural Bengali written in correct Bengali script with familiar English food words such as meal, curry, match, and cart only where natural. Do not write formal/literary pure Bengali, Romanised Bengali, or random language mixing. Check Bengali spelling, grammar, punctuation, and relevance before returning JSON. Treat cartContext.presentRoles as already covered and cartContext.avoidRoles as forbidden. Recommendations have already been hard-filtered and assigned separate pairing roles by the server. Explain each exact role: bread helps with gravy; dessert is a sweet finish; light side balances the plate. Never recommend a second heavy curry for a rich meat thali. Return a headline that fits within two short mobile lines and a subtext that fits within two short mobile lines. Never invent popularity, scarcity, discounts, savings, ingredients, prices, delivery promises, urgency, or knowledge about the customer beyond this cart."
           },
           {
             role: "user",
@@ -54,10 +54,11 @@ export async function personalizeCartCopy(result: CartRecommendationResult) {
                 headline: result.headline,
                 supportingCopy: result.supportingCopy
               },
-              allowedRecommendations: result.recommendations.map(({ id, name, price, reason }) => ({
+              allowedRecommendations: result.recommendations.map(({ id, name, price, reason, pairingRole }) => ({
                 id,
                 name,
                 price,
+                pairingRole,
                 factualReason: reason
               }))
             })

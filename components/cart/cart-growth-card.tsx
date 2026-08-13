@@ -2,53 +2,72 @@
 
 import Image from "next/image";
 import { Gift, LoaderCircle, Plus, Sparkles, Truck } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { useCart, type CartItem } from "@/components/cart/cart-provider";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useCart } from "@/components/cart/cart-provider";
 import { Button } from "@/components/ui/button";
 import type { CartRecommendationResult } from "@/lib/cart-recommendations";
-import { getCustomizationOptions } from "@/lib/cart-customization";
 import { formatCurrency } from "@/lib/utils";
 
 type RecommendationResponse = CartRecommendationResult & { ok: true };
 
 const recommendationCache = new Map<string, RecommendationResponse>();
+const localCacheKey = "saswatis-cart-meal-match-v2";
+const localCacheTtlMs = 45 * 60 * 1000;
+const maxCachedMatches = 18;
 
-export function CartItemCustomization({ item }: { item: CartItem }) {
-  const { updateCustomization } = useCart();
-  const options = getCustomizationOptions(item.name);
-  if (!options.length) return null;
+type StoredRecommendation = {
+  cachedAt: number;
+  result: RecommendationResponse;
+};
 
-  return (
-    <label className="mt-3 block text-xs text-stone-600">
-      <span className="font-semibold text-stone-700">Kitchen preference</span>
-      <select
-        value={item.customization ?? "Regular"}
-        onChange={(event) => updateCustomization(
-          item.id,
-          event.target.value === "Regular" ? null : event.target.value
-        )}
-        className="mt-1.5 h-9 w-full rounded-xl border border-[#e5d4c2] bg-white px-3 text-xs text-stone-800 outline-none focus:border-primary"
-        aria-label={`Kitchen preference for ${item.name}`}
-      >
-        {options.map((option) => <option key={option}>{option}</option>)}
-      </select>
-      <span className="mt-1 block text-[10px] leading-4 text-stone-500">We’ll follow your request wherever today’s preparation allows.</span>
-    </label>
-  );
+function getCachedRecommendation(signature: string) {
+  const inMemory = recommendationCache.get(signature);
+  if (inMemory) return inMemory;
+
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(localCacheKey) ?? "{}") as Record<string, StoredRecommendation>;
+    const match = stored[signature];
+    if (!match || Date.now() - match.cachedAt > localCacheTtlMs || !match.result?.ok) return null;
+    recommendationCache.set(signature, match.result);
+    return match.result;
+  } catch {
+    return null;
+  }
+}
+
+function cacheRecommendation(signature: string, result: RecommendationResponse) {
+  recommendationCache.set(signature, result);
+
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(localCacheKey) ?? "{}") as Record<string, StoredRecommendation>;
+    const freshEntries = Object.entries(stored)
+      .filter(([, entry]) => entry && Date.now() - entry.cachedAt <= localCacheTtlMs)
+      .sort(([, left], [, right]) => right.cachedAt - left.cachedAt)
+      .slice(0, maxCachedMatches - 1);
+    window.localStorage.setItem(localCacheKey, JSON.stringify({
+      ...Object.fromEntries(freshEntries),
+      [signature]: { cachedAt: Date.now(), result }
+    }));
+  } catch {
+    // Recommendations remain available even if storage is unavailable or full.
+  }
 }
 
 export function CartGrowthCard({
   distanceKm,
   mealType,
-  compact = false
+  compact = false,
+  variant = "default"
 }: {
   distanceKm: number | null;
   mealType?: "LUNCH" | "DINNER";
   compact?: boolean;
+  variant?: "default" | "rail";
 }) {
   const { items, addItem } = useCart();
   const [result, setResult] = useState<RecommendationResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const requestIdRef = useRef(0);
   const signature = useMemo(
     () => JSON.stringify({
       cart: items.map(({ id, quantity }) => ({ id, quantity })).sort((a, b) => a.id.localeCompare(b.id)),
@@ -59,20 +78,26 @@ export function CartGrowthCard({
   );
 
   useEffect(() => {
+    const requestId = ++requestIdRef.current;
+
     if (!items.length) {
       setResult(null);
+      setLoading(false);
       return;
     }
 
-    const cached = recommendationCache.get(signature);
+    const cached = getCachedRecommendation(signature);
     if (cached) {
       setResult(cached);
+      setLoading(false);
       return;
     }
 
+    // Never keep a previous cart's match visible while the current cart is loading.
+    setResult(null);
+    setLoading(true);
     const controller = new AbortController();
-    const timeout = window.setTimeout(async () => {
-      setLoading(true);
+    void (async () => {
       try {
         const response = await fetch("/api/cart/recommendations", {
           method: "POST",
@@ -81,19 +106,18 @@ export function CartGrowthCard({
           body: signature
         });
         const data = await response.json() as RecommendationResponse;
-        if (!response.ok || !data.ok) return;
-        recommendationCache.set(signature, data);
+        if (!response.ok || !data.ok || requestId !== requestIdRef.current) return;
+        cacheRecommendation(signature, data);
         setResult(data);
       } catch {
         // The cart remains fully usable when personalized recommendations are unavailable.
       } finally {
-        setLoading(false);
+        if (requestId === requestIdRef.current) setLoading(false);
       }
-    }, 240);
+    })();
 
     return () => {
       controller.abort();
-      window.clearTimeout(timeout);
     };
   }, [items.length, signature]);
 
@@ -104,9 +128,11 @@ export function CartGrowthCard({
     return item ? [item] : [];
   }) ?? [];
 
+  const isRail = variant === "rail";
+
   return (
     <section data-testid="cart-growth-card" className="overflow-hidden rounded-[26px] border border-[#dfb06e] bg-gradient-to-br from-[#fff9ed] via-[#fff3dc] to-[#fbe4bd] shadow-[inset_0_1px_0_rgba(255,255,255,.9)]">
-      <div className={compact ? "p-4" : "p-5 sm:p-6"}>
+      <div className={compact || isRail ? "p-4" : "p-5 sm:p-6"}>
         <div className="flex items-center justify-between gap-3">
           <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#a24b26]">
             <Sparkles className="h-3.5 w-3.5" /> Smart meal match
@@ -116,15 +142,25 @@ export function CartGrowthCard({
           ) : null}
         </div>
 
-        <h3 className={`mt-3 font-serif font-semibold leading-tight text-[#402817] ${compact ? "text-xl" : "text-2xl sm:text-[28px]"}`}>
-          {result?.headline ?? "Delivery charge নয়—টাকাটা খাবারেই থাক"}
-        </h3>
-        <p className="mt-2 text-xs leading-5 text-[#76563c] sm:text-sm">
-          {result?.supportingCopy ?? "আপনার cart দেখে আজকের খাবারের সঙ্গে মানানসই কিছু খুঁজছি…"}
-        </p>
+        {loading && !result ? (
+          <div className="mt-5 rounded-2xl border border-white/80 bg-white/55 px-4 py-5 text-center" aria-live="polite">
+            <LoaderCircle className="mx-auto h-5 w-5 animate-spin text-[#ad5428]" />
+            <p className="mt-3 text-sm font-semibold text-[#5d3822]">আপনার খাবারের সঙ্গে</p>
+            <p className="mt-1 text-sm text-[#76563c]">সেরা match খুঁজছি…</p>
+          </div>
+        ) : null}
 
-        {result?.threshold !== null && result?.threshold !== undefined ? (
-          <div className="mt-4 rounded-2xl border border-white/80 bg-white/65 p-3">
+        {result ? (
+          <>
+            <h3 className={`mt-3 font-serif font-semibold leading-tight text-[#402817] ${compact || isRail ? "line-clamp-2 text-lg" : "text-2xl sm:text-[28px]"}`}>
+              {result.headline}
+            </h3>
+            <p className={`mt-2 text-xs leading-5 text-[#76563c] sm:text-sm ${isRail ? "line-clamp-2" : ""}`}>{result.supportingCopy}</p>
+          </>
+        ) : null}
+
+        {!isRail && result ? (
+          result.threshold !== null && result.threshold !== undefined ? <div className="mt-4 rounded-2xl border border-white/80 bg-white/65 p-3">
             <div className="flex items-center justify-between gap-3 text-xs font-semibold">
               <span className="flex items-center gap-1.5 text-[#68462d]"><Truck className="h-4 w-4 text-[#b35b2d]" /> Free-delivery goal</span>
               <span className="text-[#9f421f]">{formatCurrency(result.subtotal)} / {formatCurrency(result.threshold)}</span>
@@ -140,39 +176,39 @@ export function CartGrowthCard({
                 আর {formatCurrency(result.remaining)} খাবার যোগ করলে বর্তমান {formatCurrency(result.deliveryFee ?? 0)} delivery charge বাঁচবে।
               </p>
             ) : null}
-          </div>
-        ) : (
-          <p className="mt-4 rounded-2xl border border-white/80 bg-white/65 px-3 py-2.5 text-[11px] leading-5 text-[#76563c]">
-            Checkout-এ location দিলে আপনার exact free-delivery goal দেখাব।
+          </div> : <p className="mt-4 rounded-2xl border border-white/80 bg-white/65 px-3 py-2.5 text-[11px] leading-5 text-[#76563c]">
+            Add your delivery location at checkout to see your exact free-delivery goal.
           </p>
-        )}
-
-        {loading && !result ? (
-          <p className="mt-4 flex items-center gap-2 text-xs text-[#76563c]"><LoaderCircle className="h-3.5 w-3.5 animate-spin" /> Matching your meal…</p>
         ) : null}
 
         {result?.recommendations.length ? (
-          <div className="mt-4 space-y-2.5">
-            {result.recommendations.slice(0, compact ? 3 : 4).map((item) => (
-              <article key={item.id} className="flex items-center gap-3 rounded-2xl border border-white/90 bg-white/80 p-2.5">
-                {!compact ? (
-                  <Image src={item.imageUrl} alt="" width={56} height={56} className="h-14 w-14 rounded-xl object-cover" sizes="56px" />
-                ) : null}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-bold text-[#402817]">{item.name}</p>
-                    <span className="shrink-0 text-xs font-bold text-[#a74320]">{formatCurrency(item.price)}</span>
+          <div className={isRail ? "mt-4 -mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-1" : "mt-5 grid gap-3 sm:grid-cols-2"}>
+            {result.recommendations.slice(0, isRail ? 3 : compact ? 3 : 4).map((item) => (
+              <article key={item.id} className={isRail ? `${result.recommendations.length === 1 ? "w-full" : "w-[calc(50%-6px)]"} shrink-0 snap-start rounded-2xl border border-white/90 bg-white/85 p-2.5` : compact ? "flex items-center gap-3 rounded-2xl border border-white/90 bg-white/80 p-2.5" : "flex min-h-[174px] flex-col rounded-[24px] border border-white/90 bg-white/85 p-3"}>
+                {isRail ? <div className="flex h-16 w-full items-center justify-center overflow-hidden rounded-xl bg-[#f5ead7]"><Image src={item.imageUrl} alt="" width={128} height={96} className="h-full w-full object-contain object-center" sizes="150px" /></div> : !compact ? (
+                  <div className="flex h-[128px] w-full items-center justify-center overflow-hidden rounded-[16px] bg-[#f5ead7]">
+                    <Image src={item.imageUrl} alt="" width={360} height={200} className="h-full w-full object-contain object-center" sizes="(min-width: 640px) 260px, 100vw" />
                   </div>
-                  <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-[#806047]">{item.reason}</p>
+                ) : null}
+                <div className={isRail ? "mt-2" : compact ? "min-w-0 flex-1" : "mt-3 min-w-0"}>
+                  {isRail ? <p className="text-[10px] font-semibold uppercase tracking-[0.11em] text-[#a85b32]">{item.pairingRole === "bread" ? "Perfect with gravy" : item.pairingRole === "dessert" ? "Sweet finish" : item.pairingRole === "light_side" ? "Light side" : "Meal companion"}</p> : null}
+                  <div className="flex items-center justify-between gap-2">
+                    <p className={`truncate text-sm font-bold text-[#402817] ${isRail ? "mt-0.5" : ""}`}>{item.name}</p>
+                    {compact && !isRail ? <span className="shrink-0 text-xs font-bold text-[#a74320]">{formatCurrency(item.price)}</span> : null}
+                  </div>
+                  {!isRail && compact ? <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-[#806047]">{item.reason}</p> : null}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => addItem(item)}
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-white transition-transform hover:scale-105"
-                  aria-label={`Add ${item.name}`}
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
+                <div className={isRail ? "mt-2 flex items-center justify-between" : compact ? "" : "mt-auto flex items-center justify-between pt-3"}>
+                  {isRail || !compact ? <span className="text-sm font-bold text-[#a74320]">{formatCurrency(item.price)}</span> : null}
+                  <button
+                    type="button"
+                    onClick={() => addItem(item)}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-white transition-transform hover:scale-105"
+                    aria-label={`Add ${item.name}`}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
               </article>
             ))}
           </div>
