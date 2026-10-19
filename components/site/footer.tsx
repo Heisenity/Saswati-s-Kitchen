@@ -38,6 +38,11 @@ export function Footer() {
           </p>
         </div>
       </div>
+      <div className="border-t border-[#eadfd3] px-4 py-3 text-center sm:px-6 lg:px-8">
+        <p className="text-[11px] leading-relaxed text-stone-500">
+          * Visual presentations are styled with culinary AI imagery to showcase our authentic Bengali homestyle recipes. Every order is freshly hand-crafted with pure daily ingredients in our kitchen.
+        </p>
+      </div>
     </footer>
   );
 }

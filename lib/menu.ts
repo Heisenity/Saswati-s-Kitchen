@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { isPrismaConnectionError, prisma } from "@/lib/prisma";
-import { defaultMenuItems } from "@/lib/default-data";
+import { addOnDefinitions, defaultMenuItems } from "@/lib/default-data";
 import { isDatabaseConfigured } from "@/lib/env";
 
 function useCurrentRuiPhoto<T extends { id: string; imageUrl: string }>(item: T) {
@@ -27,9 +27,30 @@ function getFallbackMenuItems() {
   );
 }
 
+function sortMenuItems<T extends { id: string; itemKind: "THALI" | "ADD_ON"; price: number }>(items: T[]): T[] {
+  const addOnOrder = addOnDefinitions.map((def) => def.slug);
+  return [...items].sort((a, b) => {
+    if (a.itemKind === "THALI" && b.itemKind === "THALI") {
+      return b.price - a.price;
+    }
+    if (a.itemKind === "THALI") return -1;
+    if (b.itemKind === "THALI") return 1;
+
+    const aBase = a.id.replace(/^(dinner-)?addon-/, "");
+    const bBase = b.id.replace(/^(dinner-)?addon-/, "");
+    const aIndex = addOnOrder.indexOf(aBase);
+    const bIndex = addOnOrder.indexOf(bBase);
+
+    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+    if (aIndex !== -1) return -1;
+    if (bIndex !== -1) return 1;
+    return 0;
+  });
+}
+
 async function loadMenuItems() {
   if (!isDatabaseConfigured()) {
-    return getFallbackMenuItems();
+    return sortMenuItems(getFallbackMenuItems());
   }
 
   try {
@@ -52,14 +73,14 @@ async function loadMenuItems() {
         }
       }
     });
-    return menuItems.map(useCurrentRuiPhoto);
+    return sortMenuItems(menuItems.map(useCurrentRuiPhoto));
   } catch (error) {
-    if (isPrismaConnectionError(error)) return getFallbackMenuItems();
+    if (isPrismaConnectionError(error)) return sortMenuItems(getFallbackMenuItems());
     throw error;
   }
 }
 
-const getCachedMenuItems = unstable_cache(loadMenuItems, ["public-menu-v3"], {
+const getCachedMenuItems = unstable_cache(loadMenuItems, ["public-menu-v8"], {
   revalidate: 172800,
   tags: ["public-menu"]
 });
