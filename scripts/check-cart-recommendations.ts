@@ -37,14 +37,14 @@ assert.deepEqual(
   curryResult.recommendations.map((item) => item.itemKind),
   ["ADD_ON", "ADD_ON", "ADD_ON"]
 );
-assert.ok(curryResult.recommendations.some((item) => item.name === "Roti"));
+assert.ok(curryResult.recommendations.some((item) => item.name.includes("Roti")));
 
 const muttonResult = buildCartRecommendations({
   cart: [{ id: "sunday-mutton-combo", quantity: 1 }],
   catalog,
   distanceKm: null
 });
-assert.ok(muttonResult.recommendations.some((item) => item.name === "Roti"));
+assert.ok(muttonResult.recommendations.some((item) => item.name.includes("Roti")));
 assert.ok(!muttonResult.recommendations.some((item) => item.name === "Milk Sewai"));
 assert.ok(!muttonResult.recommendations.some((item) => /dalna|curry|tarka|dum|masala/i.test(item.name)));
 

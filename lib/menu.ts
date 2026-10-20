@@ -44,7 +44,7 @@ function sortMenuItems<T extends { id: string; itemKind: "THALI" | "ADD_ON"; pri
     if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
     if (aIndex !== -1) return -1;
     if (bIndex !== -1) return 1;
-    return 0;
+    return b.price - a.price;
   });
 }
 
@@ -80,7 +80,7 @@ async function loadMenuItems() {
   }
 }
 
-const getCachedMenuItems = unstable_cache(loadMenuItems, ["public-menu-v8"], {
+const getCachedMenuItems = unstable_cache(loadMenuItems, ["public-menu-v9"], {
   revalidate: 172800,
   tags: ["public-menu"]
 });

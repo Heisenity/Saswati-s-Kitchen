@@ -12,11 +12,14 @@ for (const item of addOnDefinitions) {
 }
 assert.equal(addOnDefinitions[0].slug, "mutton-kosha-3pcs");
 assert.equal(addOnDefinitions[1].slug, "mutton-kosha-2pcs");
-assert.equal(addOnDefinitions[2].slug, "roti");
-assert.equal(addOnDefinitions[addOnDefinitions.length - 4].slug, "veg-fried-rice");
-assert.equal(addOnDefinitions[addOnDefinitions.length - 3].slug, "chicken-fried-rice");
-assert.equal(addOnDefinitions[addOnDefinitions.length - 2].slug, "boiled-egg-2pcs");
-assert.equal(addOnDefinitions[addOnDefinitions.length - 1].slug, "boiled-egg-1pc");
+assert.equal(addOnDefinitions[2].slug, "chicken-curry-plate");
+assert.equal(addOnDefinitions[3].slug, "chicken-tarka");
+assert.equal(addOnDefinitions[4].slug, "katla-fish-curry");
+assert.equal(addOnDefinitions[5].slug, "rui-fish-curry");
+assert.equal(addOnDefinitions[6].slug, "chicken-fried-rice");
+assert.equal(addOnDefinitions[7].slug, "veg-fried-rice");
+assert.equal(addOnDefinitions[addOnDefinitions.length - 2].slug, "boiled-egg-1pc");
+assert.equal(addOnDefinitions[addOnDefinitions.length - 1].slug, "roti");
 assert.equal(addOnDefinitions.find((item) => item.slug === "roti")?.price, 7);
 assert.equal(addOnDefinitions.find((item) => item.slug === "butter-roti")?.price, 15);
 assert.equal(addOnDefinitions.find((item) => item.slug === "chicken-curry-plate")?.price, 100);
