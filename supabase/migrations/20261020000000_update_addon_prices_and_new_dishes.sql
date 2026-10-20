@@ -1,5 +1,8 @@
 begin;
 
+alter table "MenuItem"
+  add column if not exists "itemKind" text not null default 'THALI';
+
 -- Update existing addon prices, description, badge, and rename Soyabean Curry to Soyabean Kosha
 with addon_updates(base_slug, name, description, price, badge, image_path, stock_limit, component) as (
   values
@@ -48,7 +51,7 @@ with addon_updates(base_slug, name, description, price, badge, image_path, stock
     stock_limit,
     component
   from addon_updates
-  cross join (values ('LUNCH'::"MealType"), ('DINNER'::"MealType")) as meals(meal_type)
+  cross join (values ('LUNCH'), ('DINNER')) as meals(meal_type)
 )
 insert into "MenuItem" (
   id, name, slug, description, price, "imageUrl", "mealType", "itemKind", badge,
@@ -106,7 +109,7 @@ with addon_components as (
       ('boiled-egg-2pcs', '2 boiled eggs'),
       ('boiled-egg-1pc', '1 boiled egg')
   ) as base_data(base_slug, component)
-  cross join (values ('LUNCH'::"MealType"), ('DINNER'::"MealType")) as meals(meal_type)
+  cross join (values ('LUNCH'), ('DINNER')) as meals(meal_type)
 )
 delete from "MenuItemComponent"
 where "menuItemId" in (select target_id from addon_components);
@@ -153,7 +156,7 @@ from (
       ('boiled-egg-2pcs', '2 boiled eggs'),
       ('boiled-egg-1pc', '1 boiled egg')
   ) as base_data(base_slug, component)
-  cross join (values ('LUNCH'::"MealType"), ('DINNER'::"MealType")) as meals(meal_type)
+  cross join (values ('LUNCH'), ('DINNER')) as meals(meal_type)
 ) as final_data
 on conflict (id) do update set "itemName" = excluded."itemName";
 

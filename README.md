@@ -16,7 +16,7 @@ Production-ready MVP for a Bengali homemade food delivery service in Barrackpore
 
 ## Connected services
 
-- Supabase project ref: `ovmvmjgutbdtkxnzkvpb`
+- Supabase project ref: `xeilpbbphtforanachdv`
 - Local dev ports:
   - Frontend: `http://localhost:4001`
 - Local Doppler scope on this machine:
@@ -86,8 +86,8 @@ Required Doppler secrets:
 Notes:
 
 - Use the Supabase Postgres connection string for both `DATABASE_URL` and `DIRECT_URL`.
-- `NEXT_PUBLIC_SUPABASE_URL` should be `https://ovmvmjgutbdtkxnzkvpb.supabase.co`
-- `SUPABASE_PROJECT_REF` should be `ovmvmjgutbdtkxnzkvpb`
+- `NEXT_PUBLIC_SUPABASE_URL` should be `https://xeilpbbphtforanachdv.supabase.co`
+- `SUPABASE_PROJECT_REF` should be `xeilpbbphtforanachdv`
 - If `DATABASE_URL` is missing, the storefront falls back to sample menu/settings data, but orders, chat persistence, admin data, and payment workflows will not be production-ready.
 
 You can use `.env.example` as a value checklist, but the runtime scripts are wired through Doppler.

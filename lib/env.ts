@@ -1,6 +1,6 @@
 const requiredClientEnv = {
   appUrl: process.env.NEXT_PUBLIC_APP_URL ?? process.env.URL ?? "http://localhost:4001",
-  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://ovmvmjgutbdtkxnzkvpb.supabase.co",
+  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://xeilpbbphtforanachdv.supabase.co",
   supabasePublishableKey:
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
     "sb_publishable_pm0UNtRlsHPZJXlv-OMtpA_i7keLyx9"
@@ -20,7 +20,7 @@ export const env = {
   adminEmailAllowlist:
     process.env.ADMIN_EMAIL_ALLOWLIST ??
     "insightsnode@gmail.com,senpintu95@gmail.com,saswatisen1980@gmail.com",
-  supabaseProjectRef: process.env.SUPABASE_PROJECT_REF ?? "ovmvmjgutbdtkxnzkvpb",
+  supabaseProjectRef: process.env.SUPABASE_PROJECT_REF ?? "xeilpbbphtforanachdv",
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
   supabaseStorageBucket: process.env.SUPABASE_STORAGE_BUCKET ?? "payment-proofs",
   r2AccountId: process.env.R2_ACCOUNT_ID,
