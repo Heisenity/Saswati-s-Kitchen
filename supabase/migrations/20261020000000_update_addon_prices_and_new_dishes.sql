@@ -1,3 +1,10 @@
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'MealType') then
+    create type "MealType" as enum ('LUNCH', 'DINNER');
+  end if;
+end $$;
+
 begin;
 
 alter table "MenuItem"
@@ -57,7 +64,7 @@ insert into "MenuItem" (
   id, name, slug, description, price, "imageUrl", "mealType", "itemKind", badge,
   "isActive", "stockLimit", "createdAt", "updatedAt"
 )
-select id, name, id, description, price, image_path, meal_type, 'ADD_ON', badge, true, stock_limit, now(), now()
+select id, name, id, description, price, image_path, meal_type::"MealType", 'ADD_ON', badge, true, stock_limit, now(), now()
 from expanded
 on conflict (slug) do update set
   name = excluded.name,
