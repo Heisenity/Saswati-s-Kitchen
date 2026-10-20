@@ -40,13 +40,13 @@ with addon_updates(base_slug, name, description, price, badge, image_path, stock
     ('soyabean-curry', 'Soyabean Kosha', 'Homestyle soyabean kosha with warm Bengali spices.', 45, '1 plate', '/brand/addons/soyabean-curry.jpg', 40, '1 plate'),
     ('dhokar-dalna-1pc', 'Dhokar Dalna', 'Bengali dhokar dalna with one golden lentil cake.', 35, '1 pc', '/brand/addons/dhokar-dalna-1pc.jpg', 35, '1 plate · 1 piece'),
     ('cholar-dal', 'Cholar Dal', 'A comforting plate of lightly spiced Bengali cholar dal.', 30, '1 plate', '/brand/addons/cholar-dal.jpg', 40, '1 plate'),
-    ('boiled-egg-2pcs', 'Boiled Egg', 'Two freshly boiled farm eggs served with a pinch of rock salt and black pepper.', 30, '2 pcs', '/brand/addons/boiled-egg-2pcs.jpg', 50, '2 boiled eggs'),
-    ('extra-rice', 'Extra Rice', 'One extra plate of fluffy steamed rice.', 25, '1 plate', '/brand/addons/extra-rice.jpg', 60, '1 plate'),
     ('aloo-bhaja', 'Aloo Bhaja', 'Crisp, golden Bengali-style fried potato strips.', 25, '1 plate', '/brand/addons/aloo-bhaja.jpg', 40, '1 plate'),
     ('bhindi-bhaja', 'Bhindi Bhaja', 'Lightly spiced, dry-fried okra with homestyle flavour.', 25, '1 plate', '/brand/addons/bhindi-bhaja.jpg', 35, '1 plate'),
     ('butter-roti', 'Butter Roti', 'One warm roti finished with a light touch of butter.', 15, '1 pc', '/brand/addons/butter-roti.jpg', 100, '1 piece'),
     ('egg-omelette', 'Egg Omelette', 'A freshly cooked, lightly seasoned one-egg omelette.', 15, '1 pc', '/brand/addons/egg-omelette.jpg', 50, '1 egg omelette'),
+    ('boiled-egg-2pcs', 'Boiled Egg', 'Two freshly boiled farm eggs served with a pinch of rock salt and black pepper.', 30, '2 pcs', '/brand/addons/boiled-egg-2pcs.jpg', 50, '2 boiled eggs'),
     ('boiled-egg-1pc', 'Boiled Egg', 'One freshly boiled farm egg served with a pinch of rock salt and black pepper.', 15, '1 pc', '/brand/addons/boiled-egg-1pc.jpg', 50, '1 boiled egg'),
+    ('extra-rice', 'Extra Rice', 'One extra plate of fluffy steamed rice.', 25, '1 plate', '/brand/addons/extra-rice.jpg', 60, '1 plate'),
     ('roti', 'Roti', 'One fresh, soft roti—perfect with any curry.', 7, '1 pc', '/brand/addons/roti.jpg', 100, '1 piece')
 ), expanded as (
   select
@@ -109,13 +109,13 @@ with addon_components as (
       ('soyabean-curry', '1 plate'),
       ('dhokar-dalna-1pc', '1 plate · 1 piece'),
       ('cholar-dal', '1 plate'),
-      ('boiled-egg-2pcs', '2 boiled eggs'),
-      ('extra-rice', '1 plate'),
       ('aloo-bhaja', '1 plate'),
       ('bhindi-bhaja', '1 plate'),
       ('butter-roti', '1 piece'),
       ('egg-omelette', '1 egg omelette'),
+      ('boiled-egg-2pcs', '2 boiled eggs'),
       ('boiled-egg-1pc', '1 boiled egg'),
+      ('extra-rice', '1 plate'),
       ('roti', '1 piece')
   ) as base_data(base_slug, component)
   cross join (values ('LUNCH'), ('DINNER')) as meals(meal_type)
@@ -156,13 +156,13 @@ from (
       ('soyabean-curry', '1 plate'),
       ('dhokar-dalna-1pc', '1 plate · 1 piece'),
       ('cholar-dal', '1 plate'),
-      ('boiled-egg-2pcs', '2 boiled eggs'),
-      ('extra-rice', '1 plate'),
       ('aloo-bhaja', '1 plate'),
       ('bhindi-bhaja', '1 plate'),
       ('butter-roti', '1 piece'),
       ('egg-omelette', '1 egg omelette'),
+      ('boiled-egg-2pcs', '2 boiled eggs'),
       ('boiled-egg-1pc', '1 boiled egg'),
+      ('extra-rice', '1 plate'),
       ('roti', '1 piece')
   ) as base_data(base_slug, component)
   cross join (values ('LUNCH'), ('DINNER')) as meals(meal_type)

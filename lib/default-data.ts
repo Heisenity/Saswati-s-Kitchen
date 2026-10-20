@@ -43,13 +43,13 @@ export const addOnDefinitions: AddOnDefinition[] = [
   { name: "Soyabean Kosha", slug: "soyabean-curry", description: "Homestyle soyabean kosha with warm Bengali spices.", price: 45, badge: "1 plate", imageUrl: "/brand/addons/soyabean-curry.jpg", stockLimit: 40, components: ["1 plate"] },
   { name: "Dhokar Dalna", slug: "dhokar-dalna-1pc", description: "Bengali dhokar dalna with one golden lentil cake.", price: 35, badge: "1 pc", imageUrl: "/brand/addons/dhokar-dalna-1pc.jpg", stockLimit: 35, components: ["1 plate · 1 piece"] },
   { name: "Cholar Dal", slug: "cholar-dal", description: "A comforting plate of lightly spiced Bengali cholar dal.", price: 30, badge: "1 plate", imageUrl: "/brand/addons/cholar-dal.jpg", stockLimit: 40, components: ["1 plate"] },
-  { name: "Boiled Egg", slug: "boiled-egg-2pcs", description: "Two freshly boiled farm eggs served with a pinch of rock salt and black pepper.", price: 30, badge: "2 pcs", imageUrl: "/brand/addons/boiled-egg-2pcs.jpg", stockLimit: 50, components: ["2 boiled eggs"] },
-  { name: "Extra Rice", slug: "extra-rice", description: "One extra plate of fluffy steamed rice.", price: 25, badge: "1 plate", imageUrl: "/brand/addons/extra-rice.jpg", stockLimit: 60, components: ["1 plate"] },
   { name: "Aloo Bhaja", slug: "aloo-bhaja", description: "Crisp, golden Bengali-style fried potato strips.", price: 25, badge: "1 plate", imageUrl: "/brand/addons/aloo-bhaja.jpg", stockLimit: 40, components: ["1 plate"] },
   { name: "Bhindi Bhaja", slug: "bhindi-bhaja", description: "Lightly spiced, dry-fried okra with homestyle flavour.", price: 25, badge: "1 plate", imageUrl: "/brand/addons/bhindi-bhaja.jpg", stockLimit: 35, components: ["1 plate"] },
   { name: "Butter Roti", slug: "butter-roti", description: "One warm roti finished with a light touch of butter.", price: 15, badge: "1 pc", imageUrl: "/brand/addons/butter-roti.jpg", stockLimit: 100, components: ["1 piece"] },
   { name: "Egg Omelette", slug: "egg-omelette", description: "A freshly cooked, lightly seasoned one-egg omelette.", price: 15, badge: "1 pc", imageUrl: "/brand/addons/egg-omelette.jpg", stockLimit: 50, components: ["1 egg omelette"] },
+  { name: "Boiled Egg", slug: "boiled-egg-2pcs", description: "Two freshly boiled farm eggs served with a pinch of rock salt and black pepper.", price: 30, badge: "2 pcs", imageUrl: "/brand/addons/boiled-egg-2pcs.jpg", stockLimit: 50, components: ["2 boiled eggs"] },
   { name: "Boiled Egg", slug: "boiled-egg-1pc", description: "One freshly boiled farm egg served with a pinch of rock salt and black pepper.", price: 15, badge: "1 pc", imageUrl: "/brand/addons/boiled-egg-1pc.jpg", stockLimit: 50, components: ["1 boiled egg"] },
+  { name: "Extra Rice", slug: "extra-rice", description: "One extra plate of fluffy steamed rice.", price: 25, badge: "1 plate", imageUrl: "/brand/addons/extra-rice.jpg", stockLimit: 60, components: ["1 plate"] },
   { name: "Roti", slug: "roti", description: "One fresh, soft roti—perfect with any curry.", price: 7, badge: "1 pc", imageUrl: "/brand/addons/roti.jpg", stockLimit: 100, components: ["1 piece"] }
 ];
 
