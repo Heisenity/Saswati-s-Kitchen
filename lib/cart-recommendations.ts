@@ -49,7 +49,7 @@ export type CartRecommendationResult = {
   };
 };
 
-const nonVegPattern = /egg|chicken|mutton|fish|katla|rui|pabda|chingri|prawn|meat|mach/i;
+const nonVegPattern = /egg|chicken|mutton|fish|katla|rui|pabda|chingri|prawn|meat|mach|tangra|bata|pona/i;
 const dessertPattern = /sewai|sweet|roshogolla|dessert/i;
 const staplePattern = /roti|rice|parantha/i;
 const curryPattern = /curry|tarka|dalna|dum|masala|kosha/i;

@@ -21,14 +21,17 @@ export const addOnDefinitions: AddOnDefinition[] = [
   { name: "Chicken Tarka", slug: "chicken-tarka", description: "A hearty bowl of tarka dal with tender chicken pieces.", price: 100, badge: "1 plate", imageUrl: "/brand/addons/chicken-tarka.jpg", stockLimit: 25, components: ["1 plate"] },
 
   // 3. Fish items
+  { name: "Tangra Fish Curry", slug: "tangra-fish-curry", description: "Homestyle Bengali Tangra fish curry with two tender pieces in rich aromatic gravy.", price: 100, badge: "2 pcs", imageUrl: "/brand/addons/tangra-fish-curry.jpg", stockLimit: 30, components: ["1 plate · 2 fish pieces"] },
   { name: "Katla Fish Curry", slug: "katla-fish-curry", description: "Bengali katla curry with one generous fish piece.", price: 75, badge: "1 pc", imageUrl: "/brand/addons/katla-fish-curry.jpg", stockLimit: 30, components: ["1 plate · 1 fish piece"] },
   { name: "Rui Fish Curry", slug: "rui-fish-curry", description: "Classic rui curry with one comforting fish piece.", price: 55, badge: "1 pc", imageUrl: "/brand/addons/rui-fish-curry.jpg", stockLimit: 35, components: ["1 plate · 1 fish piece"] },
+  { name: "Chara Pona Fish Curry", slug: "chara-pona-fish-curry", description: "Fresh chara pona fish cooked in light, comforting homestyle Bengali curry.", price: 55, badge: "1 pc", imageUrl: "/brand/addons/chara-pona-fish-curry.jpg", stockLimit: 35, components: ["1 plate · 1 fish piece"] },
 
   // 4. Fried Rice items
   { name: "Chicken Fried Rice", slug: "chicken-fried-rice", description: "Aromatic fried rice loaded with seasoned shredded chicken, egg and gentle homestyle spices.", price: 125, badge: "1 plate", imageUrl: "/brand/addons/chicken-fried-rice.jpg", stockLimit: 25, components: ["1 plate"] },
   { name: "Veg Fried Rice", slug: "veg-fried-rice", description: "Fluffy, fragrant Bengali style veg fried rice tossed with carrots, beans, cashews and gentle whole spices.", price: 90, badge: "1 plate", imageUrl: "/brand/addons/veg-fried-rice.jpg", stockLimit: 30, components: ["1 plate"] },
 
   // 5. Other items (High to Low price)
+  { name: "Palak Paneer", slug: "palak-paneer", description: "Soft fresh paneer cubes cooked in a spiced, vibrant spinach gravy.", price: 140, badge: "1 plate", imageUrl: "/brand/addons/palak-paneer.jpg", stockLimit: 25, components: ["1 plate"] },
   { name: "Paneer Butter Masala", slug: "paneer-butter-masala", description: "Rich, creamy paneer butter masala for a fuller meal.", price: 100, badge: "1 plate", imageUrl: "/brand/addons/paneer-butter-masala.jpg", stockLimit: 25, components: ["1 plate"] },
   { name: "Milk Sewai", slug: "milk-sewai", description: "Creamy milk sewai with a gentle cardamom sweetness.", price: 80, badge: "1 plate", imageUrl: "/brand/addons/milk-sewai.jpg", stockLimit: 30, components: ["1 plate"] },
   { name: "Mixed Vegetables", slug: "mixed-vegetables", description: "A colourful homestyle mix of seasonal vegetables.", price: 70, badge: "1 plate", imageUrl: "/brand/addons/mixed-vegetables.jpg", stockLimit: 35, components: ["1 plate"] },
@@ -36,12 +39,16 @@ export const addOnDefinitions: AddOnDefinition[] = [
   { name: "Egg Tarka", slug: "egg-tarka", description: "Comforting tarka dal enriched with freshly cooked egg.", price: 65, badge: "1 plate", imageUrl: "/brand/addons/egg-tarka.jpg", stockLimit: 35, components: ["1 plate"] },
   { name: "Chana Masala", slug: "chana-masala", description: "Slow-cooked chickpeas in a rich, homestyle masala.", price: 60, badge: "1 plate", imageUrl: "/brand/addons/chana-masala.jpg", stockLimit: 40, components: ["1 plate"] },
   { name: "Plain Tarka", slug: "plain-tarka", description: "Creamy dhaba-style tarka dal with garlic and green chilli.", price: 55, badge: "1 plate", imageUrl: "/brand/addons/plain-tarka.jpg", stockLimit: 35, components: ["1 plate"] },
+  { name: "Vendi Masala", slug: "vendi-masala", description: "Fresh tender okra cooked in a savoury homestyle tomato and onion masala.", price: 55, badge: "1 plate", imageUrl: "/brand/addons/vendi-masala.jpg", stockLimit: 35, components: ["1 plate"] },
   { name: "Egg Curry", slug: "egg-curry", description: "Homestyle Bengali egg curry with two eggs.", price: 55, badge: "2 pcs", imageUrl: "/brand/addons/egg-curry.jpg", stockLimit: 40, components: ["1 plate · 2 eggs"] },
   { name: "Dhokar Dalna", slug: "dhokar-dalna-2pcs", description: "Bengali dhokar dalna with two golden lentil cakes.", price: 50, badge: "2 pcs", imageUrl: "/brand/addons/dhokar-dalna-2pcs.jpg", stockLimit: 35, components: ["1 plate · 2 pieces"] },
   { name: "Egg Bhurji", slug: "egg-bhurji", description: "Fresh egg bhurji prepared with two eggs.", price: 50, badge: "2 dimer", imageUrl: "/brand/addons/egg-bhurji.jpg", stockLimit: 40, components: ["1 plate · 2 eggs"] },
+  { name: "Aloo Fulkofi Curry", slug: "aloo-fulkofi-curry", description: "Classic Bengali aloo fulkopi curry with tender cauliflower and potatoes in mild warm spices.", price: 50, badge: "1 plate", imageUrl: "/brand/addons/aloo-fulkofi-curry.jpg", stockLimit: 35, components: ["1 plate"] },
   { name: "Aloo Dum", slug: "aloo-dum", description: "Bengali aloo dum with four tender potato pieces.", price: 45, badge: "4 pcs", imageUrl: "/brand/addons/aloo-dum.jpg", stockLimit: 35, components: ["1 plate · 4 potato pieces"] },
   { name: "Soyabean Kosha", slug: "soyabean-curry", description: "Homestyle soyabean kosha with warm Bengali spices.", price: 45, badge: "1 plate", imageUrl: "/brand/addons/soyabean-curry.jpg", stockLimit: 40, components: ["1 plate"] },
+  { name: "Potol Dorma", slug: "potol-dorma-4pcs", description: "Traditional Bengali potol dorma—delicately stuffed pointed gourds simmered in velvety gravy (4 pcs).", price: 45, badge: "4 pcs", imageUrl: "/brand/addons/potol-dorma.jpg", stockLimit: 30, components: ["1 plate · 4 pieces"] },
   { name: "Dhokar Dalna", slug: "dhokar-dalna-1pc", description: "Bengali dhokar dalna with one golden lentil cake.", price: 35, badge: "1 pc", imageUrl: "/brand/addons/dhokar-dalna-1pc.jpg", stockLimit: 35, components: ["1 plate · 1 piece"] },
+  { name: "Musur Dal", slug: "musur-dal", description: "Comforting homestyle Bengali musur dal tempered with cumin, turmeric and green chilli.", price: 35, badge: "1 plate", imageUrl: "/brand/addons/musur-dal.jpg", stockLimit: 40, components: ["1 plate"] },
   { name: "Cholar Dal", slug: "cholar-dal", description: "A comforting plate of lightly spiced Bengali cholar dal.", price: 30, badge: "1 plate", imageUrl: "/brand/addons/cholar-dal.jpg", stockLimit: 40, components: ["1 plate"] },
   { name: "Aloo Bhaja", slug: "aloo-bhaja", description: "Crisp, golden Bengali-style fried potato strips.", price: 25, badge: "1 plate", imageUrl: "/brand/addons/aloo-bhaja.jpg", stockLimit: 40, components: ["1 plate"] },
   { name: "Bhindi Bhaja", slug: "bhindi-bhaja", description: "Lightly spiced, dry-fried okra with homestyle flavour.", price: 25, badge: "1 plate", imageUrl: "/brand/addons/bhindi-bhaja.jpg", stockLimit: 35, components: ["1 plate"] },
@@ -101,6 +108,18 @@ export const defaultMenuItems: MenuSeed[] = [
     components: ["Rice", "Moosor daal", "Aloo potol kosha", "Mutton Kosha", "Chutney/aachar", "Papad", "Salad"]
   },
   {
+    name: "Tangra Macher Thali",
+    slug: "tangra-macher-thali",
+    description: "Rich and aromatic Bengali Tangra macher jhol with two fish pieces, served with rice, dal, and accompaniments.",
+    price: 200,
+    badge: "2 pcs",
+    imageUrl: "/brand/tangra-macher-thali.jpg",
+    mealType: "LUNCH",
+    itemKind: "THALI",
+    stockLimit: 20,
+    components: ["Rice", "Moosor daal", "Aloo potol kosha", "Tangra fish curry (2 pcs)", "Chutney/aachar", "Papad", "Salad"]
+  },
+  {
     name: "Chingri Thali",
     slug: "chingri-thali",
     description: "Light, flavorful and comforting prawn meal.",
@@ -125,6 +144,18 @@ export const defaultMenuItems: MenuSeed[] = [
     components: ["Rice", "Moosor daal", "Aloo potol kosha", "Sorshe Pabda (1 pc)", "Chutney/aachar", "Papad", "Salad"]
   },
   {
+    name: "Bata Macher Thali",
+    slug: "bata-macher-thali",
+    description: "Homestyle Bata macher jhol served with fragrant rice, dal, and accompaniments.",
+    price: 150,
+    badge: "Bengali Special",
+    imageUrl: "/brand/bata-macher-thali.jpg",
+    mealType: "LUNCH",
+    itemKind: "THALI",
+    stockLimit: 20,
+    components: ["Rice", "Moosor daal", "Aloo potol kosha", "Bata macher curry (1 pc)", "Chutney/aachar", "Papad", "Salad"]
+  },
+  {
     name: "Chicken Thali",
     slug: "chicken-thali",
     description: "Everyday comfort with homestyle chicken curry.",
@@ -135,6 +166,18 @@ export const defaultMenuItems: MenuSeed[] = [
     itemKind: "THALI",
     stockLimit: 24,
     components: ["Rice", "Moosor daal", "Aloo potol kosha", "Chicken Curry", "Chutney/aachar", "Papad", "Salad"]
+  },
+  {
+    name: "Chara Pona Thali",
+    slug: "chara-pona-thali",
+    description: "Authentic Bengali chara pona fish curry served with steamed rice, dal, and homestyle sides.",
+    price: 140,
+    badge: "Fresh Catch",
+    imageUrl: "/brand/chara-pona-thali.jpg",
+    mealType: "LUNCH",
+    itemKind: "THALI",
+    stockLimit: 20,
+    components: ["Rice", "Moosor daal", "Aloo potol kosha", "Chara Pona fish curry (1 pc)", "Chutney/aachar", "Papad", "Salad"]
   },
   {
     name: "Katlaa Macher Thali",
@@ -209,6 +252,18 @@ export const defaultMenuItems: MenuSeed[] = [
     components: ["Fried rice", "Mutton kosha", "Chutney/sweet aachar", "Papad", "Salad", "Roshogolla"]
   },
   {
+    name: "Tangra Macher Thali",
+    slug: "dinner-tangra-macher-thali",
+    description: "Rich and aromatic Bengali Tangra macher jhol with two fish pieces, served with rice, dal, and evening spread.",
+    price: 200,
+    badge: "2 pcs",
+    imageUrl: "/brand/tangra-macher-thali.jpg",
+    mealType: "DINNER",
+    itemKind: "THALI",
+    stockLimit: 20,
+    components: ["Rice", "Moosor daal", "Mochar Ghanto (Banana Flower)", "Tangra fish curry (2 pcs)", "Chutney/aachar", "Papad", "Salad"]
+  },
+  {
     name: "Chicken Combo",
     slug: "dinner-sunday-chicken-combo",
     description: "A complete Sunday comfort combo with fried rice, chicken kosha and roshogolla—big value in one plate.",
@@ -221,6 +276,18 @@ export const defaultMenuItems: MenuSeed[] = [
     components: ["Fried rice", "Chicken kosha", "Chutney/sweet aachar", "Papad", "Salad", "Roshogolla"]
   },
   {
+    name: "Bata Macher Thali",
+    slug: "dinner-bata-macher-thali",
+    description: "Homestyle Bata macher jhol served with fresh Bengali dinner spread.",
+    price: 150,
+    badge: "Bengali Special",
+    imageUrl: "/brand/bata-macher-thali.jpg",
+    mealType: "DINNER",
+    itemKind: "THALI",
+    stockLimit: 20,
+    components: ["Rice", "Moosor daal", "Mochar Ghanto (Banana Flower)", "Bata macher curry (1 pc)", "Chutney/aachar", "Papad", "Salad"]
+  },
+  {
     name: "Chicken Thali",
     slug: "dinner-chicken-thali",
     description: "Homestyle chicken curry with a comforting Bengali dinner spread.",
@@ -231,6 +298,18 @@ export const defaultMenuItems: MenuSeed[] = [
     itemKind: "THALI",
     stockLimit: 24,
     components: ["Rice", "Moosor daal", "Mochar Ghanto (Banana Flower)", "Chicken Curry (2 pcs)", "Chutney/aachar", "Papad", "Salad"]
+  },
+  {
+    name: "Chara Pona Thali",
+    slug: "dinner-chara-pona-thali",
+    description: "Authentic Bengali chara pona fish curry served with fresh dinner sides.",
+    price: 140,
+    badge: "Fresh Catch",
+    imageUrl: "/brand/chara-pona-thali.jpg",
+    mealType: "DINNER",
+    itemKind: "THALI",
+    stockLimit: 20,
+    components: ["Rice", "Moosor daal", "Mochar Ghanto (Banana Flower)", "Chara Pona fish curry (1 pc)", "Chutney/aachar", "Papad", "Salad"]
   },
   {
     name: "Katlaa Macher Thali",
